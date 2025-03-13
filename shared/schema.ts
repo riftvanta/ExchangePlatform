@@ -91,6 +91,7 @@ export const transactions = pgTable('transactions', {
         .defaultNow(),
     fileKey: text('file_key'),
     rejectionReason: text('rejection_reason'),
+    walletAddress: text('wallet_address'), // Destination wallet address for withdrawals
 });
 
 export const usersRelations = relations(users, ({ many }) => ({

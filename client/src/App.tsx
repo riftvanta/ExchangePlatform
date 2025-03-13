@@ -7,8 +7,11 @@ import ProfilePage from './pages/ProfilePage';
 import WalletBalances from './components/WalletBalances';
 import CreateWalletForm from './components/CreateWalletForm';
 import DepositUsdtForm from './components/DepositUsdtForm';
+import WithdrawUsdtForm from './components/WithdrawUsdtForm';
 import TransactionHistory from './components/TransactionHistory';
+import WithdrawalHistory from './components/WithdrawalHistory';
 import AdminDepositsPage from './pages/admin/AdminDepositsPage';
+import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage';
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -46,6 +49,7 @@ function AdminOnly({ children }: { children: ReactNode }) {
 // Simple Dashboard component
 const Dashboard = () => {
     const { logout } = useAuth();
+    const { user } = useAuth();
 
     return (
         <div className="dashboard">
@@ -62,26 +66,69 @@ const Dashboard = () => {
                 >
                     View Profile
                 </Link>
-                {/* Admin link - only visible to admins */}
-                {useAuth().user?.isAdmin && (
-                    <Link
-                        to="/admin/deposits"
-                        style={{
-                            display: 'inline-block',
-                            margin: '1rem 0 1rem 1rem',
-                            color: '#646cff',
-                            textDecoration: 'none',
-                        }}
-                    >
-                        Manage Deposits
-                    </Link>
+                {/* Admin links - only visible to admins */}
+                {user?.isAdmin && (
+                    <>
+                        <Link
+                            to="/admin/deposits"
+                            style={{
+                                display: 'inline-block',
+                                margin: '1rem 0 1rem 1rem',
+                                color: '#646cff',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            Manage Deposits
+                        </Link>
+                        <Link
+                            to="/admin/withdrawals"
+                            style={{
+                                display: 'inline-block',
+                                margin: '1rem 0 1rem 1rem',
+                                color: '#646cff',
+                                textDecoration: 'none',
+                            }}
+                        >
+                            Manage Withdrawals
+                        </Link>
+                    </>
                 )}
             </div>
             <WalletBalances />
             <CreateWalletForm />
-            <DepositUsdtForm />
-            <TransactionHistory />
-            <button onClick={logout}>Logout</button>
+            
+            <div className="transaction-section" style={{ 
+                display: 'flex',
+                flexWrap: 'wrap',
+                gap: '20px',
+                marginTop: '20px'
+            }}>
+                <div style={{ flex: '1 1 400px' }}>
+                    <DepositUsdtForm />
+                </div>
+                <div style={{ flex: '1 1 400px' }}>
+                    <WithdrawUsdtForm />
+                </div>
+            </div>
+            
+            <div className="history-section" style={{ marginTop: '30px' }}>
+                <h2>Transaction Records</h2>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 400px' }}>
+                        <TransactionHistory />
+                    </div>
+                    <div style={{ flex: '1 1 400px' }}>
+                        <WithdrawalHistory />
+                    </div>
+                </div>
+            </div>
+            
+            <button 
+                onClick={logout}
+                style={{ marginTop: '30px' }}
+            >
+                Logout
+            </button>
         </div>
     );
 };
@@ -119,6 +166,16 @@ function App() {
                                 <ProtectedRoute>
                                     <AdminOnly>
                                         <AdminDepositsPage />
+                                    </AdminOnly>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/withdrawals"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminOnly>
+                                        <AdminWithdrawalsPage />
                                     </AdminOnly>
                                 </ProtectedRoute>
                             }

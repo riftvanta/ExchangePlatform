@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "wallet_address" text;

@@ -13,7 +13,7 @@ import { NewWallet, transactions, NewTransaction } from '../shared/schema';
 import Decimal from 'decimal.js';
 import db from './db';
 import { wallets } from '../shared/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, lt } from 'drizzle-orm';
 import { isAdmin } from './middleware/isAdmin';
 import { generateReadUrl } from './s3';
 
@@ -363,7 +363,12 @@ router.post(
     (async (req: Request, res: Response) => {
         try {
             const { transactionId } = req.params;
-            const { rejectionReason } = req.body; // Get rejectionReason from body
+            const { rejectionReason } = req.body;
+
+            // Validate input
+            if (!rejectionReason) {
+                return res.status(400).json({ error: 'Rejection reason is required' });
+            }
 
             // Find the transaction
             const transaction = await db
@@ -383,21 +388,14 @@ router.post(
                     .json({ error: 'Transaction is not pending' });
             }
 
-            // Validate rejectionReason if status is rejected
-            if (!rejectionReason) {
-                return res
-                    .status(400)
-                    .json({ error: 'Rejection reason is required' });
-            }
-
-            // Update transaction status and rejectionReason
+            // Update transaction status
             await db
                 .update(transactions)
-                .set({
-                    status: 'rejected',
+                .set({ 
+                    status: 'rejected', 
                     updatedAt: new Date(),
-                    rejectionReason: rejectionReason,
-                }) // Set rejectionReason
+                    rejectionReason: rejectionReason || 'No reason provided'
+                })
                 .where(eq(transactions.id, transactionId));
 
             res.status(200).json({ message: 'Deposit rejected' });
@@ -464,6 +462,327 @@ router.get(
             res.status(200).json({ imageUrl: presignedUrl });
         } catch (error) {
             console.error('Get deposit image error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }) as RequestHandler
+);
+
+/**
+ * USDT Withdrawal endpoint
+ * Handles withdrawals of USDT from user wallet (requires admin approval)
+ */
+router.post('/withdraw/usdt', isAuthenticated, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const userId = req.session.userId as string;
+        const { amount, walletAddress } = req.body;
+
+        // Validate input
+        if (
+            !amount ||
+            typeof amount !== 'string' ||
+            !/^\d+(\.\d+)?$/.test(amount)
+        ) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+        if (!walletAddress) {
+            return res
+                .status(400)
+                .json({ error: 'Wallet address is required' });
+        }
+
+        // Get USDT wallet
+        const userWallets = await getWalletsByUserId(userId);
+        const usdtWallet = userWallets.find(
+            (wallet) => wallet.currency === 'USDT'
+        );
+
+        if (!usdtWallet) {
+            return res.status(400).json({ error: 'USDT wallet not found' });
+        }
+
+        // Check if user has sufficient balance
+        const currentBalance = new Decimal(usdtWallet.balance);
+        const withdrawAmount = new Decimal(amount);
+
+        if (withdrawAmount.gt(currentBalance)) {
+            return res.status(400).json({ error: 'Insufficient balance' });
+        }
+
+        // Generate a unique transaction hash for this withdrawal
+        const transactionHash = `WITHDRAW-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+
+        // Create a new transaction record
+        const newTransaction: NewTransaction = {
+            userId: userId,
+            walletId: usdtWallet.id,
+            type: 'withdrawal',
+            currency: 'USDT',
+            amount: amount,
+            transactionHash: transactionHash,
+            status: 'pending', // Initial status is 'pending'
+            walletAddress: walletAddress, // Store the destination wallet address
+        };
+
+        const insertedTransaction = await db
+            .insert(transactions)
+            .values(newTransaction)
+            .returning();
+
+        // DO NOT UPDATE WALLET BALANCE HERE - Admin will approve first
+
+        res.status(201).json({
+            message: 'Withdrawal request submitted for approval',
+            transaction: insertedTransaction[0],
+        });
+    } catch (error) {
+        console.error('Withdrawal error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
+ * Get user's withdrawal requests
+ */
+router.get('/withdrawals', isAuthenticated, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const userId = req.session.userId as string;
+        
+        const userWithdrawals = await db
+            .select()
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.userId, userId),
+                    eq(transactions.type, 'withdrawal')
+                )
+            );
+            
+        res.status(200).json({ withdrawals: userWithdrawals });
+    } catch (error) {
+        console.error('Get withdrawals error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
+ * Get pending withdrawal transactions (admin only)
+ */
+router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const pendingWithdrawals = await db
+            .select({
+                transaction: transactions,
+                availableBalance: wallets.balance,
+            })
+            .from(transactions)
+            .leftJoin(wallets, eq(transactions.walletId, wallets.id))
+            .where(
+                and(
+                    eq(transactions.type, 'withdrawal'),
+                    eq(transactions.status, 'pending')
+                )
+            );
+
+        // For each user with pending withdrawals, calculate the total pending amount
+        const usersPendingTotals = new Map<string, Decimal>();
+
+        // First pass: gather all pending withdrawal amounts by user
+        pendingWithdrawals.forEach(({ transaction }) => {
+            const userId = transaction.userId;
+            const amount = new Decimal(transaction.amount);
+            
+            if (usersPendingTotals.has(userId)) {
+                usersPendingTotals.set(userId, usersPendingTotals.get(userId)!.plus(amount));
+            } else {
+                usersPendingTotals.set(userId, amount);
+            }
+        });
+
+        // Second pass: enhance each transaction with available balance after all pending withdrawals
+        const enhancedWithdrawals = pendingWithdrawals.map(({ transaction, availableBalance }) => {
+            const userId = transaction.userId;
+            const totalPending = usersPendingTotals.get(userId) || new Decimal(0);
+            const currentBalance = new Decimal(availableBalance || '0');
+            const availableAfterPending = currentBalance.minus(totalPending).toString();
+            
+            // Check if this specific withdrawal can be approved based on current available balance
+            // and considering all other pending withdrawals that would be processed before this one
+            const pendingBeforeThis = pendingWithdrawals
+                .filter(pw => 
+                    pw.transaction.userId === userId && 
+                    new Date(pw.transaction.createdAt) < new Date(transaction.createdAt)
+                )
+                .reduce((acc, curr) => acc.plus(new Decimal(curr.transaction.amount)), new Decimal(0));
+            
+            const availableForThis = currentBalance.minus(pendingBeforeThis);
+            const canApprove = availableForThis.gte(new Decimal(transaction.amount));
+
+            return {
+                ...transaction,
+                currentBalance: availableBalance,
+                availableBalance: availableAfterPending,
+                canApprove
+            };
+        });
+
+        res.status(200).json({ withdrawals: enhancedWithdrawals });
+    } catch (error) {
+        console.error('Get pending withdrawals error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
+ * Approve a pending withdrawal transaction (admin only)
+ */
+router.post(
+    '/admin/withdrawals/:transactionId/approve',
+    isAuthenticated,
+    isAdmin,
+    (async (req: Request, res: Response) => {
+        try {
+            const { transactionId } = req.params;
+
+            // Find the transaction
+            const transaction = await db
+                .select()
+                .from(transactions)
+                .where(eq(transactions.id, transactionId))
+                .then((rows) => rows[0] ?? null);
+
+            if (!transaction) {
+                return res.status(404).json({ error: 'Transaction not found' });
+            }
+
+            // Check if the transaction is pending
+            if (transaction.status !== 'pending') {
+                return res
+                    .status(400)
+                    .json({ error: 'Transaction is not pending' });
+            }
+
+            // Get the user's wallet
+            const userWallets = await getWalletsByUserId(transaction.userId);
+            const wallet = userWallets.find(
+                (w) => w.currency === transaction.currency
+            );
+
+            if (!wallet) {
+                return res.status(400).json({ error: 'Wallet not found' });
+            }
+
+            // Check other pending withdrawals with earlier timestamps
+            const earlierPendingWithdrawals = await db
+                .select()
+                .from(transactions)
+                .where(
+                    and(
+                        eq(transactions.userId, transaction.userId),
+                        eq(transactions.type, 'withdrawal'),
+                        eq(transactions.status, 'pending'),
+                        eq(transactions.currency, transaction.currency),
+                        lt(transactions.createdAt, transaction.createdAt)
+                    )
+                );
+            
+            // Calculate total amount of earlier pending withdrawals
+            const totalEarlierPending = earlierPendingWithdrawals.reduce(
+                (total, tx) => total.plus(new Decimal(tx.amount)),
+                new Decimal(0)
+            );
+            
+            // Check if user has sufficient balance after accounting for earlier pending withdrawals
+            const currentBalance = new Decimal(wallet.balance);
+            const withdrawAmount = new Decimal(transaction.amount);
+            const availableBalance = currentBalance.minus(totalEarlierPending);
+            
+            if (withdrawAmount.gt(availableBalance)) {
+                return res.status(400).json({ 
+                    error: 'Insufficient balance after considering earlier pending withdrawals',
+                    availableBalance: availableBalance.toString(),
+                    requestedAmount: withdrawAmount.toString()
+                });
+            }
+
+            // Update wallet balance
+            const newBalance = currentBalance.minus(withdrawAmount).toString();
+
+            await db
+                .update(wallets)
+                .set({ balance: newBalance, updatedAt: new Date() })
+                .where(eq(wallets.id, wallet.id));
+
+            // Update transaction status
+            await db
+                .update(transactions)
+                .set({ status: 'approved', updatedAt: new Date() })
+                .where(eq(transactions.id, transactionId));
+
+            res.status(200).json({ message: 'Withdrawal approved' });
+        } catch (error) {
+            console.error('Approve withdrawal error:', error);
+            res.status(500).json({ error: 'Internal server error' });
+        }
+    }) as RequestHandler
+);
+
+/**
+ * Reject a pending withdrawal transaction (admin only)
+ */
+router.post(
+    '/admin/withdrawals/:transactionId/reject',
+    isAuthenticated,
+    isAdmin,
+    (async (req: Request, res: Response) => {
+        try {
+            const { transactionId } = req.params;
+            const { rejectionReason } = req.body;
+
+            // Validate input
+            if (!rejectionReason) {
+                return res.status(400).json({ error: 'Rejection reason is required' });
+            }
+
+            // Find the transaction
+            const transaction = await db
+                .select()
+                .from(transactions)
+                .where(eq(transactions.id, transactionId))
+                .then((rows) => rows[0] ?? null);
+
+            if (!transaction) {
+                return res.status(404).json({ error: 'Transaction not found' });
+            }
+
+            // Check if the transaction is pending
+            if (transaction.status !== 'pending') {
+                return res
+                    .status(400)
+                    .json({ error: 'Transaction is not pending' });
+            }
+
+            // Update transaction status
+            await db
+                .update(transactions)
+                .set({ 
+                    status: 'rejected', 
+                    updatedAt: new Date(),
+                    rejectionReason: rejectionReason || 'No reason provided'
+                })
+                .where(eq(transactions.id, transactionId));
+
+            res.status(200).json({ message: 'Withdrawal rejected' });
+        } catch (error) {
+            console.error('Reject withdrawal error:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     }) as RequestHandler
