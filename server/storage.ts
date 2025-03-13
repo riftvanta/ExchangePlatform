@@ -9,8 +9,8 @@ import { eq } from 'drizzle-orm';
  * @returns The created user with all fields (including generated ID)
  */
 export async function createUser(newUser: NewUsers): Promise<Users> {
-  const result = await db.insert(users).values(newUser).returning();
-  return result[0];
+    const result = await db.insert(users).values(newUser).returning();
+    return result[0];
 }
 
 /**
@@ -19,13 +19,13 @@ export async function createUser(newUser: NewUsers): Promise<Users> {
  * @returns The user if found, null otherwise
  */
 export async function getUserByEmail(email: string): Promise<Users | null> {
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .then((rows) => rows[0] ?? null);
+    const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .then((rows) => rows[0] ?? null);
 
-  return user;
+    return user;
 }
 
 /**
@@ -34,11 +34,11 @@ export async function getUserByEmail(email: string): Promise<Users | null> {
  * @returns The user if found, null otherwise
  */
 export async function getUserById(id: string): Promise<Users | null> {
-  const user = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, id))
-    .then((rows) => rows[0] ?? null);
+    const user = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, id))
+        .then((rows) => rows[0] ?? null);
 
-  return user;
+    return user;
 }

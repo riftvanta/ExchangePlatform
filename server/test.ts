@@ -12,4 +12,4 @@ function greet(name: string): string {
 console.log(greet('World'));
 console.log(`Node.js Version: ${process.version}`);
 console.log(`Current environment: ${process.env.NODE_ENV || 'development'}`);
-console.log('TypeScript is working correctly!') 
+console.log('TypeScript is working correctly!');

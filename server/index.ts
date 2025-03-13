@@ -19,20 +19,20 @@ const PORT = process.env.PORT || 5000;
 app.use(express.json());
 
 app.use(
-  session({
-    store: new PostgresStore({
-      conString: process.env.DATABASE_URL,
-      createTableIfMissing: true
-    }),
-    secret: process.env.SESSION_SECRET!,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-      maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    },
-  })
+    session({
+        store: new PostgresStore({
+            conString: process.env.DATABASE_URL,
+            createTableIfMissing: true,
+        }),
+        secret: process.env.SESSION_SECRET!,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+            maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        },
+    })
 );
 
 // Mount the routers
@@ -41,5 +41,5 @@ app.use('/api', router);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
