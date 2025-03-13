@@ -76,26 +76,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         
         // Check if response contains valid JSON content before parsing
-        const contentType = response.headers.get('content-type');
+        const contentType = response.headers.get('Content-Type');
         if (!contentType || !contentType.includes('application/json')) {
-            console.warn('Login response is not JSON, returning null');
-            return null;
+            console.warn('Invalid content type:', contentType);
+            throw new Error('Unexpected response from server');
         }
 
-        const contentLength = response.headers.get('content-length');
-        if (!contentLength || parseInt(contentLength) === 0) {
-            console.warn('Login response is empty, returning null');
-            return null;
+        const contentLength = response.headers.get('Content-Length');
+        if (contentLength === '0') {
+            console.warn('Empty response body');
+            throw new Error('Empty response body');
         }
 
-        // Parse and return the response data
+        let data;
         try {
-            const data = await response.json();
-            return data.user || null;
+            data = await response.json();
         } catch (error) {
-            console.error('Error parsing login response JSON:', error);
+            console.error('JSON parsing error:', error);
             throw new Error('Invalid JSON response from server');
         }
+
+        // Set the user in the context
+        setUser(data.user);
+        return data.user;
     };
 
     // Function to register a new user
