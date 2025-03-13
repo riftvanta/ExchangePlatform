@@ -30,23 +30,6 @@ describe('Authentication Tests', () => {
         jest.clearAllMocks();
     });
 
-    // After all tests, clean up
-    afterAll(async () => {
-        // Delete transactions first (due to foreign key constraint)
-        await db.delete(transactions);
-        // Delete wallets next (due to foreign key constraint)
-        await db.delete(wallets);
-        // Then delete users
-        await db.delete(users);
-
-        // Give some time for connections to close
-        await new Promise<void>((resolve) => {
-            setTimeout(() => {
-                resolve();
-            }, 500);
-        });
-    });
-
     it('should register a new user successfully', async () => {
         const newUser = {
             email: 'test@example.com',
@@ -129,13 +112,6 @@ describe('Wallet API Tests', () => {
             password: 'password123',
         } as NewUsers);
         userId = testUser.id;
-    });
-
-    // After all tests, close the database connection
-    afterAll(async () => {
-        await db.delete(transactions);
-        await db.delete(wallets);
-        await db.delete(users);
     });
 
     it('should get wallet balances for an authenticated user', async () => {
@@ -280,13 +256,6 @@ describe('Deposit API Tests', () => {
         cookie = loginResponse.headers['set-cookie'];
     });
 
-    // After all tests, close the database connection
-    afterAll(async () => {
-        await db.delete(transactions);
-        await db.delete(wallets);
-        await db.delete(users);
-    });
-
     it('should submit a deposit request for approval', async () => {
         const depositData = {
             amount: '100',
@@ -395,12 +364,6 @@ describe('Admin Deposits API Tests', () => {
         await createWallet(newWallet);
     });
 
-    afterAll(async () => {
-        await db.delete(transactions);
-        await db.delete(wallets);
-        await db.delete(users);
-    });
-
     it('should get pending deposit transactions for an admin', async () => {
         // Create a pending deposit transaction (simulate a user submitting a deposit)
         const depositData = {
@@ -476,13 +439,6 @@ describe('USDT Deposit API Tests', () => {
         .post('/api/login')
         .send({ email: 'testuser@example.com', password: 'password123' });
         cookie = loginResponse.headers['set-cookie'];
-    });
-
-    // After all tests, close the database connection
-    afterAll(async () => {
-        await db.delete(transactions);
-        await db.delete(wallets);
-        await db.delete(users);
     });
 
     it('should submit a deposit request for approval', async () => {

@@ -4,7 +4,7 @@
     "main": "index.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
-        "test:backend": "jest server/tests --forceExit",
+        "test:backend": "jest server/tests --config=jest.config.js --runInBand --forceExit",
         "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
         "db:push": "drizzle-kit push --config=drizzle.config.ts",
         "generate-types": "ts-node scripts/generate-types.ts",

@@ -17,7 +17,7 @@ if (!DATABASE_URL) {
 }
 
 // Create postgres client with limited connections for development
-const client = postgres(DATABASE_URL, { max: 1 });
+const client = postgres(DATABASE_URL, { max: 20 });
 
 // Initialize drizzle with the client and schema
 const db = drizzle(client, { schema });
