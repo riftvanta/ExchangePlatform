@@ -39,7 +39,12 @@ app.use(
 app.use(uploadRouter); // Mount the upload router first
 app.use('/api', router);
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
+// Start server if not being imported for testing
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+    });
+}
+
+// Export the app for testing
+export default app;

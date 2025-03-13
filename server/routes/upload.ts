@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
-router.post('/api/upload-url', async (req: Request, res: Response) => {
+router.post('/api/upload-url', (async (req: Request, res: Response) => {
     try {
         const { contentType } = req.body;
 
@@ -20,6 +20,6 @@ router.post('/api/upload-url', async (req: Request, res: Response) => {
         console.error(error);
         res.status(500).json({ error: 'Failed to generate presigned URL' });
     }
-});
+}) as any);
 
 export default router;
