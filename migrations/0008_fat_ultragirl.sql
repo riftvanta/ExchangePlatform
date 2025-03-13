@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "rejection_reason" text;

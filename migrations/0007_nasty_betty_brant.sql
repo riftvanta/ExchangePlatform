@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "file_key" text;
