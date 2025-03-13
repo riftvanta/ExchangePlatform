@@ -23,7 +23,7 @@ export type User = {
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<User | null>;
     logout: () => Promise<void>;
     register: (
         email: string,
@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const loginUser = async (credentials: {
         email: string;
         password: string;
-    }): Promise<void> => {
+    }): Promise<User | null> => {
         const response = await fetch('/api/login', {
             method: 'POST',
             headers: {
@@ -63,8 +63,38 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
 
         if (!response.ok) {
+            // Check if response contains content before parsing JSON
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const contentLength = response.headers.get('content-length');
+                if (contentLength && parseInt(contentLength) > 0) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Login failed');
+                }
+            }
+            throw new Error(`Login failed with status: ${response.status}`);
+        }
+        
+        // Check if response contains valid JSON content before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.warn('Login response is not JSON, returning null');
+            return null;
+        }
+
+        const contentLength = response.headers.get('content-length');
+        if (!contentLength || parseInt(contentLength) === 0) {
+            console.warn('Login response is empty, returning null');
+            return null;
+        }
+
+        // Parse and return the response data
+        try {
             const data = await response.json();
-            throw new Error(data.error || 'Login failed');
+            return data.user || null;
+        } catch (error) {
+            console.error('Error parsing login response JSON:', error);
+            throw new Error('Invalid JSON response from server');
         }
     };
 
@@ -122,16 +152,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setIsLoading(true);
             setError(null); // Clear any previous errors
         },
-        onSuccess: async () => {
+        onSuccess: async (userData) => {
             try {
-                const result = await refetch();
-
-                // Check if user data was fetched successfully
-                if (result.data) {
-                    setUser(result.data as User);
+                if (userData) {
+                    // If user data was returned directly from login, use it
+                    setUser(userData);
+                } else {
+                    // Otherwise, fetch user data
+                    const result = await refetch();
+                    // Check if user data was fetched successfully
+                    if (result.data) {
+                        setUser(result.data as User);
+                    }
                 }
             } catch (refetchError) {
-                console.error('Error refetching user data:', refetchError);
+                console.error('Error handling user data after login:', refetchError);
                 setError('Failed to load user data after login');
             } finally {
                 setIsLoading(false); // Set isLoading to false after refetch

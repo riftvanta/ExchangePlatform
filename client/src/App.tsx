@@ -9,7 +9,6 @@ import CreateWalletForm from './components/CreateWalletForm';
 import DepositUsdtForm from './components/DepositUsdtForm';
 import TransactionHistory from './components/TransactionHistory';
 import AdminDepositsPage from './pages/admin/AdminDepositsPage';
-import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage';
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -63,32 +62,19 @@ const Dashboard = () => {
                 >
                     View Profile
                 </Link>
-                {/* Admin links - only visible to admins */}
+                {/* Admin link - only visible to admins */}
                 {useAuth().user?.isAdmin && (
-                    <>
-                        <Link
-                            to="/admin/deposits"
-                            style={{
-                                display: 'inline-block',
-                                margin: '1rem 0 1rem 1rem',
-                                color: '#646cff',
-                                textDecoration: 'none',
-                            }}
-                        >
-                            Manage Deposits
-                        </Link>
-                        <Link
-                            to="/admin/withdrawals"
-                            style={{
-                                display: 'inline-block',
-                                margin: '1rem 0 1rem 1rem',
-                                color: '#646cff',
-                                textDecoration: 'none',
-                            }}
-                        >
-                            Manage Withdrawals
-                        </Link>
-                    </>
+                    <Link
+                        to="/admin/deposits"
+                        style={{
+                            display: 'inline-block',
+                            margin: '1rem 0 1rem 1rem',
+                            color: '#646cff',
+                            textDecoration: 'none',
+                        }}
+                    >
+                        Manage Deposits
+                    </Link>
                 )}
             </div>
             <WalletBalances />
@@ -133,16 +119,6 @@ function App() {
                                 <ProtectedRoute>
                                     <AdminOnly>
                                         <AdminDepositsPage />
-                                    </AdminOnly>
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/admin/withdrawals"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminOnly>
-                                        <AdminWithdrawalsPage />
                                     </AdminOnly>
                                 </ProtectedRoute>
                             }

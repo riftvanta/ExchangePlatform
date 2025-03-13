@@ -71,13 +71,24 @@ router.post('/login', (async (req: Request, res: Response) => {
     try {
         const { email, password } = req.body;
 
+        // Validate input
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
+        }
+
         const authenticatedUser = await loginUser(email, password);
 
         // Store user ID in session
         req.session.userId = authenticatedUser.id;
 
-        // Send success response without user data
-        res.status(200).json({ message: 'Login successful' });
+        // Sanitize user data before sending response - exclude all sensitive fields
+        const { password: _, salt, twoFactorSecret, ...userWithoutSensitiveData } = authenticatedUser;
+
+        // Send success response with user data (excluding sensitive info)
+        res.status(200).json({ 
+            message: 'Login successful',
+            user: userWithoutSensitiveData
+        });
     } catch (error: any) {
         if (error.message === 'Invalid credentials') {
             return res.status(401).json({ error: 'Invalid credentials' });
