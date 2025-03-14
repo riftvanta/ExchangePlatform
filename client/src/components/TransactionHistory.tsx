@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useSocketStore, SocketEvents, TransactionUpdateData } from '../lib/socketService';
 import { toast } from 'react-toastify';
@@ -40,6 +40,39 @@ function TransactionHistory() {
         },
     });
 
+    // Cancel transaction mutation
+    const cancelMutation = useMutation({
+        mutationFn: async (transactionId: string) => {
+            const response = await fetch(`/api/transactions/${transactionId}/cancel`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to cancel transaction');
+            }
+
+            return response.json();
+        },
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+            toast.success(data.message || 'Transaction cancelled successfully');
+        },
+        onError: (error: Error) => {
+            toast.error(error.message || 'Failed to cancel transaction');
+        },
+    });
+
+    // Handle cancel transaction
+    const handleCancel = (transactionId: string, type: string) => {
+        if (window.confirm(`Are you sure you want to cancel this ${type}?`)) {
+            cancelMutation.mutate(transactionId);
+        }
+    };
+
     // Subscribe to real-time transaction updates
     useEffect(() => {
         if (!socket) return;
@@ -56,6 +89,9 @@ function TransactionHistory() {
             } else if (data.status === 'rejected') {
                 message = `Your ${data.type} of ${data.amount} ${data.currency} has been rejected. Reason: ${data.rejectionReason || 'No reason provided.'}`;
                 toast.error(message);
+            } else if (data.status === 'cancelled') {
+                message = `Your ${data.type} of ${data.amount} ${data.currency} has been cancelled.`;
+                toast.info(message);
             }
             
             // Invalidate the transactions query to refresh the data
@@ -163,6 +199,12 @@ function TransactionHistory() {
                         <span role="img" aria-hidden="true">❌</span> Rejected
                     </span>
                 );
+            case 'cancelled':
+                return (
+                    <span className="status-badge cancelled" role="status">
+                        <span role="img" aria-hidden="true">🚫</span> Cancelled
+                    </span>
+                );
             default:
                 return <span>{status}</span>;
         }
@@ -220,6 +262,7 @@ function TransactionHistory() {
                                 <th scope="col">Amount</th>
                                 <th scope="col">Status</th>
                                 <th scope="col">Notes</th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -249,8 +292,24 @@ function TransactionHistory() {
                                             <span className="rejection-reason" title={transaction.rejectionReason}>
                                                 {transaction.rejectionReason}
                                             </span>
+                                        ) : transaction.status === 'cancelled' ? (
+                                            <span className="rejection-reason">
+                                                Cancelled by user
+                                            </span>
                                         ) : (
                                             <span className="no-notes">-</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        {transaction.status === 'pending' && (
+                                            <button 
+                                                className="cancel-btn" 
+                                                onClick={() => handleCancel(transaction.id, transaction.type)}
+                                                disabled={cancelMutation.isPending}
+                                                aria-label={`Cancel ${transaction.type}`}
+                                            >
+                                                {cancelMutation.isPending ? 'Cancelling...' : 'Cancel'}
+                                            </button>
                                         )}
                                     </td>
                                 </tr>

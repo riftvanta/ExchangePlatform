@@ -23,3 +23,9 @@ export type NewUsers = {
     lastName?: string | null;
     isAdmin?: boolean;
 };
+
+// Transaction types
+export type TransactionType = 'deposit' | 'withdrawal';
+export type TransactionStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+
+// Socket event types

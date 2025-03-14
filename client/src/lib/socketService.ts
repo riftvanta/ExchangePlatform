@@ -21,7 +21,7 @@ export enum SocketEvents {
 // Define types for received data
 export interface TransactionUpdateData {
   transactionId: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   type: 'deposit' | 'withdrawal';
   amount: string;
   currency: string;

@@ -177,7 +177,7 @@ export async function sendPasswordResetConfirmationEmail(email: string) {
 export async function sendTransactionNotificationEmail(
     email: string,
     transactionType: 'deposit' | 'withdrawal',
-    status: 'pending' | 'approved' | 'rejected',
+    status: 'pending' | 'approved' | 'rejected' | 'cancelled',
     amount: string,
     currency: string,
     rejectionReason?: string
@@ -197,6 +197,13 @@ export async function sendTransactionNotificationEmail(
         htmlContent = `
             <p>Great news!</p>
             <p>Your ${transactionType} request for <strong>${amount} ${currency}</strong> has been approved and processed.</p>
+        `;
+    } else if (status === 'cancelled') {
+        subject = `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} Request Cancelled`;
+        textContent = `Your ${transactionType} request for ${amount} ${currency} has been cancelled as requested. No further action will be taken.`;
+        htmlContent = `
+            <p>Your ${transactionType} request for <strong>${amount} ${currency}</strong> has been cancelled as requested.</p>
+            <p>No further action will be taken on this request. You may submit a new request at any time.</p>
         `;
     } else if (status === 'rejected') {
         subject = `${transactionType === 'withdrawal' ? 'Withdrawal Not Processed' : `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} Request Rejected`}`;

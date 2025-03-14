@@ -6,7 +6,7 @@ import {
     NextFunction,
 } from 'express';
 import { registerUser, loginUser } from './auth';
-import { NewUsers, Users } from '../shared/types';
+import { NewUsers, Users, TransactionType, TransactionStatus } from '../shared/types';
 import { getUserByEmail, getUserById } from './storage';
 import { getWalletsByUserId, createWallet } from './storage/wallet';
 import { NewWallet, transactions, NewTransaction } from '../shared/schema';
@@ -1183,6 +1183,86 @@ router.post(
         }
     }) as RequestHandler
 );
+
+/**
+ * Cancel a pending transaction (user can only cancel their own pending transactions)
+ */
+router.post('/transactions/:transactionId/cancel', isAuthenticated, (async (req: Request, res: Response) => {
+    try {
+        const { transactionId } = req.params;
+        const userId = req.session.userId as string;
+
+        // Find the transaction
+        const transaction = await db
+            .select()
+            .from(transactions)
+            .where(eq(transactions.id, transactionId))
+            .then((rows) => rows[0] ?? null);
+
+        if (!transaction) {
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        // Verify ownership - users can only cancel their own transactions
+        if (transaction.userId !== userId) {
+            return res.status(403).json({ error: 'You can only cancel your own transactions' });
+        }
+
+        // Check if the transaction is pending
+        if (transaction.status !== 'pending') {
+            return res.status(400).json({ error: 'Only pending transactions can be cancelled' });
+        }
+
+        // Update transaction status to cancelled
+        await db
+            .update(transactions)
+            .set({ 
+                status: 'cancelled' as const, 
+                updatedAt: new Date(),
+                rejectionReason: 'Cancelled by user'
+            })
+            .where(eq(transactions.id, transactionId));
+
+        // Emit real-time update via Socket.IO
+        socketService.emitTransactionUpdate(userId, {
+            transactionId,
+            status: 'cancelled',
+            type: transaction.type,
+            amount: transaction.amount,
+            currency: transaction.currency,
+            updatedAt: new Date(),
+            rejectionReason: 'Cancelled by user'
+        });
+
+        // Get user's email for notification
+        const user = await getUserById(userId);
+        
+        if (user) {
+            // Send email notification
+            await sendTransactionNotificationEmail(
+                user.email,
+                transaction.type as 'deposit' | 'withdrawal',
+                'cancelled',
+                transaction.amount,
+                transaction.currency,
+                'Cancelled by user'
+            );
+        }
+
+        res.status(200).json({ 
+            message: `${transaction.type.charAt(0).toUpperCase() + transaction.type.slice(1)} cancelled successfully`,
+            details: {
+                transactionId,
+                amount: transaction.amount,
+                currency: transaction.currency,
+                type: transaction.type
+            }
+        });
+    } catch (error) {
+        console.error('Cancel transaction error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
 
 /**
  * Health check endpoint for Docker and monitoring
