@@ -2,8 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
-import './theme.css';
-import './index.css';
+// CSS imports removed to refactor styling from scratch
 import { AuthProvider } from './context/AuthContext';
 
 // Create a client
