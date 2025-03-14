@@ -15,6 +15,14 @@ import VerifyEmail from './pages/VerifyEmail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ResendVerification from './pages/ResendVerification';
+import JoyUIExamplePage from './pages/JoyUIExamplePage';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Import Joy UI components
+import { CssVarsProvider } from '@mui/joy/styles';
+import CssBaseline from '@mui/joy/CssBaseline';
+import theme from './theme';
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -76,6 +84,10 @@ const Dashboard = () => {
                 <Link to="/profile" className="nav-link">
                     View Profile
                 </Link>
+                {/* Joy UI Example link */}
+                <Link to="/joy-ui-examples" className="nav-link">
+                    Joy UI Examples
+                </Link>
                 {/* Admin links - only visible to admins */}
                 {user?.isAdmin && (
                     <>
@@ -133,65 +145,93 @@ function App() {
     const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/resend-verification'].includes(location);
     
     return (
-        <div className={isAuthPage ? "App-auth" : "App"}>
-            {!isAuthPage && (
-                <div className="App-header">
-                    <h1>USDT-JOD Exchange Platform</h1>
-                </div>
-            )}
+        <CssVarsProvider theme={theme} defaultMode="light">
+            {/* CssBaseline normalizes browser styles */}
+            <CssBaseline />
+            
+            <div className={isAuthPage ? "App-auth" : "App"}>
+                {!isAuthPage && (
+                    <div className="App-header">
+                        <h1>USDT-JOD Exchange Platform</h1>
+                    </div>
+                )}
 
-            <BrowserRouter>
-                <Routes>
-                    {/* Public routes */}
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
-                    {/* Email verification and password reset routes */}
-                    <Route path="/verify-email" element={<VerifyEmail />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/resend-verification" element={<ResendVerification />} />
+                <BrowserRouter>
+                    <Routes>
+                        {/* Public routes */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        {/* Email verification and password reset routes */}
+                        <Route path="/verify-email" element={<VerifyEmail />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/resend-verification" element={<ResendVerification />} />
 
-                    {/* Protected routes */}
-                    <Route
-                        path="/"
-                        element={
-                            <ProtectedRoute>
-                                <Dashboard />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/profile"
-                        element={
-                            <ProtectedRoute>
-                                <ProfilePage />
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/deposits"
-                        element={
-                            <ProtectedRoute>
-                                <AdminOnly>
-                                    <AdminDepositsPage />
-                                </AdminOnly>
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route
-                        path="/admin/withdrawals"
-                        element={
-                            <ProtectedRoute>
-                                <AdminOnly>
-                                    <AdminWithdrawalsPage />
-                                </AdminOnly>
-                            </ProtectedRoute>
-                        }
-                    />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </BrowserRouter>
-        </div>
+                        {/* Joy UI Example Page */}
+                        <Route
+                            path="/joy-ui-examples"
+                            element={
+                                <ProtectedRoute>
+                                    <JoyUIExamplePage />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Protected routes */}
+                        <Route
+                            path="/"
+                            element={
+                                <ProtectedRoute>
+                                    <Dashboard />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedRoute>
+                                    <ProfilePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/deposits"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminOnly>
+                                        <AdminDepositsPage />
+                                    </AdminOnly>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/admin/withdrawals"
+                            element={
+                                <ProtectedRoute>
+                                    <AdminOnly>
+                                        <AdminWithdrawalsPage />
+                                    </AdminOnly>
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                </BrowserRouter>
+                
+                {/* Add Toast container for notifications */}
+                <ToastContainer
+                    position="top-right"
+                    autoClose={5000}
+                    hideProgressBar={false}
+                    newestOnTop
+                    closeOnClick
+                    rtl={false}
+                    pauseOnFocusLoss
+                    draggable
+                    pauseOnHover
+                />
+            </div>
+        </CssVarsProvider>
     );
 }
 
