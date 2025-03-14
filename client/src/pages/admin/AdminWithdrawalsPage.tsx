@@ -149,6 +149,8 @@ function AdminWithdrawalsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
             toast.success('Withdrawal rejected successfully');
             setError(null);
+            setRejectingWithdrawalId(null);
+            setRejectionReason('');
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to reject withdrawal');
@@ -167,17 +169,12 @@ function AdminWithdrawalsPage() {
         setError(null);
     };
 
-    const handleConfirmReject = async () => {
-        if (rejectingWithdrawalId) {
-            try {
-                await rejectMutation.mutateAsync({
-                    withdrawalId: rejectingWithdrawalId,
-                    rejectionReason,
-                });
-            } finally {
-                setRejectingWithdrawalId(null);
-                setRejectionReason('');
-            }
+    const handleConfirmReject = () => {
+        if (rejectingWithdrawalId && rejectionReason.trim()) {
+            rejectMutation.mutate({
+                withdrawalId: rejectingWithdrawalId,
+                rejectionReason,
+            });
         }
     };
 
@@ -250,11 +247,17 @@ function AdminWithdrawalsPage() {
                             {rejectMutation.isPending ? (
                                 <>
                                     <span className="loading-spinner-small" aria-hidden="true"></span>
-                                    <span>Rejecting...</span>
+                                    <span>Processing...</span>
                                 </>
                             ) : 'Confirm Rejection'}
                         </button>
-                        <button className="button secondary" onClick={handleCancelReject}>Cancel</button>
+                        <button 
+                            className="button secondary" 
+                            onClick={handleCancelReject}
+                            disabled={rejectMutation.isPending}
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             )}

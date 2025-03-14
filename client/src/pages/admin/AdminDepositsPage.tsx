@@ -139,11 +139,14 @@ function AdminDepositsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
             setError(null);
             toast.success('Deposit rejected successfully');
+            setRejectingTransactionId(null);
+            setRejectionReason('');
         },
         onError: (err: any) => {
             // Add error handler
             setError(err.message || 'Failed to reject deposit');
             toast.error(err.message || 'Failed to reject deposit');
+            // Don't clear rejecting ID on error so user can try again with the same form open
         },
     });
 
@@ -157,17 +160,12 @@ function AdminDepositsPage() {
         setError(null);
     };
 
-    const handleConfirmReject = async () => {
-        if (rejectingTransactionId) {
-            try {
-                await rejectMutation.mutateAsync({
-                    transactionId: rejectingTransactionId,
-                    rejectionReason,
-                });
-            } finally {
-                setRejectingTransactionId(null);
-                setRejectionReason('');
-            }
+    const handleConfirmReject = () => {
+        if (rejectingTransactionId && rejectionReason.trim()) {
+            rejectMutation.mutate({
+                transactionId: rejectingTransactionId,
+                rejectionReason,
+            });
         }
     };
 
@@ -265,11 +263,17 @@ function AdminDepositsPage() {
                             {rejectMutation.isPending ? (
                                 <>
                                     <span className="loading-spinner-small" aria-hidden="true"></span>
-                                    <span>Rejecting...</span>
+                                    <span>Processing...</span>
                                 </>
                             ) : 'Confirm Rejection'}
                         </button>
-                        <button className="button secondary" onClick={handleCancelReject}>Cancel</button>
+                        <button 
+                            className="button secondary" 
+                            onClick={handleCancelReject}
+                            disabled={rejectMutation.isPending}
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </div>
             )}
