@@ -4,6 +4,9 @@ import router from './routes';
 import uploadRouter from './routes/upload';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
+import hdWalletService from './services/hdWalletService';
+import depositMonitorService from './services/depositMonitorService';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 // Load environment variables
 dotenv.config();
@@ -44,10 +47,32 @@ app.use(
 app.use(uploadRouter); // Mount the upload router first
 app.use('/api', router);
 
+// Error handling middleware (must be after route handlers)
+app.use('*', notFoundHandler); // Handle 404 errors for any route not matched
+app.use(errorHandler); // Global error handler
+
+// Initialize services
+const initializeServices = async () => {
+    try {
+        // Initialize HD wallet service
+        await hdWalletService.init();
+        console.log('HD Wallet service initialized successfully');
+        
+        // Always start deposit monitor service regardless of environment
+        depositMonitorService.start();
+        console.log('Deposit monitor service started');
+    } catch (error) {
+        console.error('Failed to initialize services:', error);
+    }
+};
+
 // Start server if not being imported for testing
 if (require.main === module) {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
+        
+        // Initialize services after server starts
+        initializeServices();
     });
 }
 

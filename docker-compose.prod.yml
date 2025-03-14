@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    container_name: usdt_jod_db_prod
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-usdt_jod_exchange}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB:-usdt_jod_exchange}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - app_network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+
+  # Backend Server
+  server:
+    container_name: usdt_jod_server_prod
+    build:
+      context: .
+      dockerfile: server.Dockerfile
+      args:
+        - NODE_ENV=production
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-usdt_jod_exchange}
+      - SESSION_SECRET=${SESSION_SECRET}
+      - TRON_NETWORK_URL=${TRON_NETWORK_URL}
+      - USE_AWS_HSM=${USE_AWS_HSM}
+      - AWS_REGION=${AWS_REGION}
+      - AWS_S3_BUCKET=${AWS_S3_BUCKET}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+    networks:
+      - app_network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    command: ["node", "./dist/server/index.js"]
+
+  # Frontend Client
+  client:
+    container_name: usdt_jod_client_prod
+    build:
+      context: .
+      dockerfile: client.Dockerfile
+      args:
+        - NODE_ENV=production
+    ports:
+      - "80:3000"
+      - "443:443"
+    depends_on:
+      - server
+    environment:
+      - NODE_ENV=production
+    networks:
+      - app_network
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+
+networks:
+  app_network:
+    driver: bridge 

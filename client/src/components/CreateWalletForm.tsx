@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { parseApiError, ApiError } from '../lib/errorHandler';
+import ErrorDisplay from './ErrorDisplay';
 
-interface CreateWalletData {
+interface CreateWalletFormData {
     currency: string;
 }
 
 function CreateWalletForm() {
-    const [currency, setCurrency] = useState('');
-    const [error, setError] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [currency, setCurrency] = useState<string>('');
+    const [formError, setFormError] = useState<ApiError | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
     const queryClient = useQueryClient();
 
-    const createWalletMutation = useMutation<any, Error, CreateWalletData>({
-        mutationFn: async (data: CreateWalletData) => {
+    const createWalletMutation = useMutation<any, ApiError, CreateWalletFormData>({
+        mutationFn: async (data: CreateWalletFormData) => {
             const response = await fetch('/api/wallet', {
                 method: 'POST',
                 headers: {
@@ -22,55 +24,94 @@ function CreateWalletForm() {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create wallet');
+                // Use our error parsing utility to standardize error handling
+                const error = await parseApiError(response);
+                throw error;
             }
 
             return response.json();
         },
-        onSuccess: () => {
+        onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['wallets'] });
-            setCurrency(''); // Clear the form
-            setError(null);
+            setCurrency('');
+            setFormError(null);
+            setSuccess(`Your new ${data.wallet.currency} wallet has been created successfully.`);
+            
+            // Clear success message after 5 seconds
+            setTimeout(() => {
+                setSuccess(null);
+            }, 5000);
         },
-        onError: (err: Error) => {
-            setError(err.message || 'Failed to create wallet');
+        onError: (error: ApiError) => {
+            setFormError(error);
+            setSuccess(null);
         },
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
-        try {
-            await createWalletMutation.mutateAsync({ currency });
-        } finally {
-            setIsLoading(false);
+        setFormError(null);
+        setSuccess(null);
+        
+        if (!currency) {
+            setFormError({
+                message: 'Please select a currency',
+                code: 'VALIDATION_ERROR',
+                errors: {
+                    currency: ['Currency selection is required']
+                }
+            });
+            return;
         }
+
+        createWalletMutation.mutate({ currency });
     };
 
     return (
-        <div>
-            <form onSubmit={handleSubmit} className="create-wallet-form">
+        <div className="wallet-form-container">
+            {success && (
+                <div className="success-message bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
+                    <span>{success}</span>
+                </div>
+            )}
+            
+            {formError && (
+                <ErrorDisplay 
+                    error={formError} 
+                    variant="alert"
+                    className="mb-4"
+                    onDismiss={() => setFormError(null)} 
+                />
+            )}
+            
+            <form onSubmit={handleSubmit} className="wallet-form">
                 <div className="form-group">
-                    <label htmlFor="currency">Currency:</label>
+                    <label htmlFor="currency" className="form-label">Currency</label>
                     <select
                         id="currency"
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        required
+                        className="form-select"
+                        aria-label="Select currency"
                     >
-                        <option value="">Select Currency</option>
-                        <option value="USDT">USDT</option>
-                        <option value="JOD">JOD</option>
+                        <option value="">Select a currency</option>
+                        <option value="USDT">USDT (Tether)</option>
+                        <option value="JOD">JOD (Jordanian Dinar)</option>
                     </select>
+                    {formError && formError.errors?.currency && (
+                        <ErrorDisplay 
+                            error={formError.errors.currency.join('. ')} 
+                            variant="inline" 
+                        />
+                    )}
                 </div>
-                {error && <div className="alert error">{error}</div>}
-                <button 
-                    type="submit" 
-                    disabled={isLoading}
-                    className="button"
+                
+                <button
+                    type="submit"
+                    className="button primary"
+                    disabled={createWalletMutation.isPending}
                 >
-                    {isLoading ? 'Creating...' : 'Create Wallet'}
+                    {createWalletMutation.isPending ? 'Creating Wallet...' : 'Create Wallet'}
                 </button>
             </form>
         </div>

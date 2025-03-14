@@ -1,25 +1,40 @@
-import { Request, Response, NextFunction, RequestHandler } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { getUserById } from '../storage'; // Import getUserById
+import { AuthorizationError } from '../../shared/errors';
 
-export const isAdmin = (async (
+/**
+ * Middleware to check if user is an admin
+ * Requires isAuthenticated middleware to run first
+ */
+export const isAdmin = async (
     req: Request,
     res: Response,
     next: NextFunction
 ) => {
-    if (!req.session.userId) {
-        return res.status(401).json({ error: 'Authentication required' });
+    try {
+        // We need to have userId in the session
+        if (!req.session.userId) {
+            throw new AuthorizationError({
+                message: 'Authentication required to access admin resources',
+                code: 'ADMIN_AUTH_REQUIRED'
+            });
+        }
+
+        // Get user from database
+        const user = await getUserById(req.session.userId);
+
+        // Check if user is admin
+        if (!user || !user.isAdmin) {
+            throw new AuthorizationError({
+                message: 'Admin privileges required to access this resource',
+                code: 'ADMIN_PRIVILEGES_REQUIRED',
+                context: { userId: req.session.userId }
+            });
+        }
+
+        // If user is admin, call next middleware
+        next();
+    } catch (error) {
+        next(error);
     }
-
-    const userId = req.session.userId as string;
-    const user = await getUserById(userId);
-
-    if (!user) {
-        return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    if (!user.isAdmin) {
-        return res.status(403).json({ error: 'Forbidden' });
-    }
-
-    next();
-}) as RequestHandler;
+};
