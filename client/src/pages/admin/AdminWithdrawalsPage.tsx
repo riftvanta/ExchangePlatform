@@ -27,6 +27,7 @@ function AdminWithdrawalsPage() {
     const [error, setError] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [rejectingWithdrawalId, setRejectingWithdrawalId] = useState<string | null>(null);
+    const [processingWithdrawalId, setProcessingWithdrawalId] = useState<string | null>(null);
     const socket = useSocketStore(state => state.socket);
 
     const {
@@ -111,10 +112,12 @@ function AdminWithdrawalsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
             toast.success('Withdrawal approved successfully');
             setError(null);
+            setProcessingWithdrawalId(null);
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to approve withdrawal');
             toast.error(err.message || 'Failed to approve withdrawal');
+            setProcessingWithdrawalId(null);
         },
     });
 
@@ -154,6 +157,7 @@ function AdminWithdrawalsPage() {
     });
 
     const handleApprove = (withdrawalId: string) => {
+        setProcessingWithdrawalId(withdrawalId);
         approveMutation.mutate(withdrawalId);
     };
 
@@ -316,13 +320,13 @@ function AdminWithdrawalsPage() {
                                                         className="action-btn approve"
                                                         onClick={() => handleApprove(withdrawal.id)}
                                                         disabled={
-                                                            approveMutation.isPending ||
+                                                            (approveMutation.isPending && processingWithdrawalId !== null) ||
                                                             rejectMutation.isPending ||
                                                             !withdrawal.canApprove
                                                         }
                                                         title={withdrawal.canApprove ? "Approve this withdrawal" : "Cannot approve - insufficient balance"}
                                                     >
-                                                        {approveMutation.isPending ? 'Processing...' : 'Approve'}
+                                                        {processingWithdrawalId === withdrawal.id ? 'Processing...' : 'Approve'}
                                                     </button>
                                                     <button
                                                         className="action-btn reject"

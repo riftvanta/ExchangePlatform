@@ -24,6 +24,7 @@ function AdminDepositsPage() {
     const [rejectingTransactionId, setRejectingTransactionId] = useState<
         string | null
     >(null);
+    const [processingDepositId, setProcessingDepositId] = useState<string | null>(null);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [viewingTransactionId, setViewingTransactionId] = useState<
         string | null
@@ -100,11 +101,13 @@ function AdminDepositsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
             setError(null); // Clear the error
             toast.success('Deposit approved successfully');
+            setProcessingDepositId(null);
         },
         onError: (err: any) => {
             // Add error handler
             setError(err.message || 'Failed to approve deposit');
             toast.error(err.message || 'Failed to approve deposit');
+            setProcessingDepositId(null);
         },
     });
 
@@ -145,6 +148,7 @@ function AdminDepositsPage() {
     });
 
     const handleApprove = (transactionId: string) => {
+        setProcessingDepositId(transactionId);
         approveMutation.mutate(transactionId);
     };
 
@@ -318,15 +322,21 @@ function AdminDepositsPage() {
                                         <button
                                             className="action-btn approve"
                                             onClick={() => handleApprove(transaction.id)}
-                                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                                            disabled={
+                                                (approveMutation.isPending && processingDepositId !== null) ||
+                                                rejectMutation.isPending
+                                            }
                                             title="Approve this deposit"
                                         >
-                                            {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                                            {processingDepositId === transaction.id ? 'Processing...' : 'Approve'}
                                         </button>
                                         <button
                                             className="action-btn reject"
                                             onClick={() => handleReject(transaction.id)}
-                                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                                            disabled={
+                                                approveMutation.isPending ||
+                                                rejectMutation.isPending
+                                            }
                                             title="Reject this deposit"
                                         >
                                             Reject
