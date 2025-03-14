@@ -1,8 +1,8 @@
 import { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import LoginForm from './components/LoginForm';
-import RegisterForm from './components/RegisterForm';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import WalletBalances from './components/WalletBalances';
 import CreateWalletForm from './components/CreateWalletForm';
@@ -129,64 +129,68 @@ const Dashboard = () => {
 };
 
 function App() {
+    const location = window.location.pathname;
+    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/resend-verification'].includes(location);
+    
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>USDT-JOD Exchange Platform</h1>
-            </header>
-            <main>
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/login" element={<LoginForm />} />
-                        <Route path="/register" element={<RegisterForm />} />
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedRoute>
-                                    <Dashboard />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/profile"
-                            element={
-                                <ProtectedRoute>
-                                    <ProfilePage />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/admin/deposits"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminOnly>
-                                        <AdminDepositsPage />
-                                    </AdminOnly>
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/admin/withdrawals"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminOnly>
-                                        <AdminWithdrawalsPage />
-                                    </AdminOnly>
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route path="/verify-email" element={<VerifyEmail />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route path="/resend-verification" element={
+        <div className={isAuthPage ? "App-auth" : "App"}>
+            {!isAuthPage && (
+                <div className="App-header">
+                    <h1>USDT-JOD Exchange Platform</h1>
+                </div>
+            )}
+
+            <BrowserRouter>
+                <Routes>
+                    {/* Public routes */}
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    {/* Email verification and password reset routes */}
+                    <Route path="/verify-email" element={<VerifyEmail />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/resend-verification" element={<ResendVerification />} />
+
+                    {/* Protected routes */}
+                    <Route
+                        path="/"
+                        element={
                             <ProtectedRoute>
-                                <ResendVerification />
+                                <Dashboard />
                             </ProtectedRoute>
-                        } />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </BrowserRouter>
-            </main>
+                        }
+                    />
+                    <Route
+                        path="/profile"
+                        element={
+                            <ProtectedRoute>
+                                <ProfilePage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/deposits"
+                        element={
+                            <ProtectedRoute>
+                                <AdminOnly>
+                                    <AdminDepositsPage />
+                                </AdminOnly>
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/admin/withdrawals"
+                        element={
+                            <ProtectedRoute>
+                                <AdminOnly>
+                                    <AdminWithdrawalsPage />
+                                </AdminOnly>
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </BrowserRouter>
         </div>
     );
 }

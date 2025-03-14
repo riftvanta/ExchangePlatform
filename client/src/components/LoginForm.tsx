@@ -32,48 +32,72 @@ function LoginForm() {
             <h2>Login</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label htmlFor="email">Email</label>
+                    <label htmlFor="email">
+                        <i className="fa-solid fa-envelope"></i> Email
+                    </label>
                     <input
                         type="email"
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email"
                         required
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="password">Password</label>
+                    <label htmlFor="password">
+                        <i className="fa-solid fa-lock"></i> Password
+                    </label>
                     <input
                         type="password"
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Enter your password"
                         required
                     />
                 </div>
 
                 {error && (
                     <div className="alert error">
-                        {error}
+                        <i className="fa-solid fa-circle-exclamation"></i> {error}
                     </div>
                 )}
 
                 <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Logging in...' : 'Login'}
+                    {isLoading ? (
+                        <>
+                            <i className="fa-solid fa-spinner fa-spin"></i> Logging in...
+                        </>
+                    ) : (
+                        <>
+                            <i className="fa-solid fa-right-to-bracket"></i> Login
+                        </>
+                    )}
                 </button>
             </form>
 
-            <div className="mt-4 text-center">
-                <Link to="/forgot-password" className="text-blue-500 hover:underline">
-                    Forgot your password?
-                </Link>
-            </div>
-
-            <div className="mt-2 text-center">
-                <p className="text-sm text-gray-600">
+            <div className="auth-links">
+                <p>
+                    <i className="fa-solid fa-user-plus"></i>
+                    Don't have an account?{' '}
+                    <Link to="/register" className="signup-link">
+                        Sign up
+                    </Link>
+                </p>
+                
+                <p>
+                    <i className="fa-solid fa-key"></i>
+                    <Link to="/forgot-password">
+                        Forgot your password?
+                    </Link>
+                </p>
+                
+                <p>
+                    <i className="fa-solid fa-envelope-circle-check"></i>
                     Need to verify your email?{' '}
-                    <Link to="/resend-verification" className="text-blue-500 hover:underline">
+                    <Link to="/resend-verification">
                         Resend verification email
                     </Link>
                 </p>

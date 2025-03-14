@@ -63,6 +63,11 @@
   --transition-slow: 350ms ease;
 }
 
+/* Universal box-sizing for consistent sizing */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 /* Base styles */
 body {
   font-family: var(--font-family);
@@ -74,11 +79,65 @@ body {
   padding: 0;
 }
 
+/* Login page background */
+.login-page, .register-page, .verification-page, .password-reset-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: var(--spacing-lg);
+  position: relative;
+}
+
+.login-page::before, .register-page::before, .verification-page::before, .password-reset-page::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.05;
+  background: 
+    linear-gradient(45deg, transparent 48%, var(--color-primary) 49%, var(--color-primary) 51%, transparent 52%),
+    linear-gradient(-45deg, transparent 48%, var(--color-primary) 49%, var(--color-primary) 51%, transparent 52%);
+  background-size: 30px 30px;
+  pointer-events: none;
+}
+
+/* App logo styling */
+.app-logo {
+  text-align: center;
+  margin-bottom: var(--spacing-xl);
+}
+
+.app-logo h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin: 0;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.app-logo p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
 /* App container */
 .App {
   max-width: 1280px;
   margin: 0 auto;
   padding: var(--spacing-xl);
+}
+
+/* Auth pages container (no padding/margins) */
+.App-auth {
+  width: 100%;
+  height: 100vh;
+  /* No padding or max-width to allow the full-page gradient background */
 }
 
 /* Header styling */
@@ -307,14 +366,161 @@ a:hover {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--border-light);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Form content needs proper spacing */
+.login-form-container form,
+.registration-form-container form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.login-form-container::before, .registration-form-container::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-accent));
 }
 
 .login-form-container h2, .registration-form-container h2 {
   margin-top: 0;
   margin-bottom: var(--spacing-lg);
   text-align: center;
-  color: var(--text-primary);
+  color: var(--color-primary);
+  font-weight: 700;
+  font-size: 1.75rem;
+}
+
+/* Enhanced form styling for login/register */
+.login-form-container .form-group input, 
+.registration-form-container .form-group input {
+  width: 100%; /* Full width within form group */
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-medium);
+  transition: all var(--transition-normal);
+  font-size: 1rem;
+  background-color: var(--bg-secondary);
+}
+
+.login-form-container .form-group, 
+.registration-form-container .form-group {
+  margin-bottom: var(--spacing-md);
+  text-align: left;
+  width: 100%; /* Ensure the form group takes full width of container */
+  position: relative; /* For proper positioning of child elements */
+}
+
+.login-form-container .form-group input:focus, 
+.registration-form-container .form-group input:focus {
+  transform: translateY(-2px);
+  border-color: var(--color-primary);
+  box-shadow: 0 4px 12px rgba(0, 82, 204, 0.15);
+  background-color: var(--bg-primary);
+}
+
+.login-form-container .form-group label, 
+.registration-form-container .form-group label {
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-sm);
+  display: block;
+}
+
+/* Login button styling */
+.login-form-container button, 
+.registration-form-container button {
+  width: 100%;
+  padding: var(--spacing-md);
+  margin-top: var(--spacing-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 1rem;
+  letter-spacing: 0.5px;
+  box-shadow: 0 4px 6px rgba(0, 82, 204, 0.2);
+  transition: all var(--transition-normal);
+}
+
+.login-form-container button:hover:not(:disabled), 
+.registration-form-container button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 82, 204, 0.25);
+}
+
+.login-form-container button:active:not(:disabled), 
+.registration-form-container button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 82, 204, 0.2);
+}
+
+/* Links in auth forms */
+.auth-links {
+  margin-top: var(--spacing-lg);
+  text-align: center;
+  border-top: 1px solid var(--border-light);
+  padding-top: var(--spacing-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg); /* Increased gap for better separation */
+}
+
+.auth-links a {
+  color: var(--color-primary);
+  font-weight: 600;
+  transition: all var(--transition-normal);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-sm);
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+
+.auth-links a:hover {
+  color: var(--color-primary-hover);
+  text-decoration: none;
+  background-color: rgba(0, 82, 204, 0.05);
+}
+
+.auth-links p {
+  color: var(--text-secondary);
+  margin: 0;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.auth-links i {
+  color: var(--color-primary);
+  font-size: 1.1rem;
+  margin-right: var(--spacing-xs);
+}
+
+/* Special styling for signup link to make it stand out */
+.auth-links .signup-link {
+  color: var(--color-primary);
+  font-weight: 600;
+  border: 1px solid var(--color-primary);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: var(--radius-md);
+  transition: all var(--transition-normal);
+  margin-left: var(--spacing-xs);
+}
+
+.auth-links .signup-link:hover {
+  background-color: var(--color-primary);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 82, 204, 0.2);
 }
 
 /* Alert/notification styling */

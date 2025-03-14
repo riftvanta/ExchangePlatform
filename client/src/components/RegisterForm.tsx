@@ -1,5 +1,5 @@
 import { useState, FormEvent, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const RegisterForm = () => {
@@ -40,64 +40,93 @@ const RegisterForm = () => {
     const displayError = error || authError;
 
     return (
-        <div className="login-form-container">
-            <h2>Register</h2>
+        <div className="registration-form-container">
+            <h2>Create Account</h2>
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label htmlFor="firstName">First Name</label>
+                    <label htmlFor="firstName">
+                        <i className="fa-solid fa-user"></i> First Name
+                    </label>
                     <input
                         type="text"
                         id="firstName"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Enter your first name"
+                        required
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="lastName">Last Name</label>
+                    <label htmlFor="lastName">
+                        <i className="fa-solid fa-user"></i> Last Name
+                    </label>
                     <input
                         type="text"
                         id="lastName"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Enter your last name"
+                        required
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="register-email">Email</label>
+                    <label htmlFor="register-email">
+                        <i className="fa-solid fa-envelope"></i> Email
+                    </label>
                     <input
                         type="email"
                         id="register-email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Enter your email"
                         required
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="register-password">Password</label>
+                    <label htmlFor="register-password">
+                        <i className="fa-solid fa-lock"></i> Password
+                    </label>
                     <input
                         type="password"
                         id="register-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Create a password"
                         required
                     />
                 </div>
 
                 {displayError && (
-                    <div
-                        className="error-message"
-                        style={{ color: 'red', marginBottom: '1rem' }}
-                    >
-                        {displayError}
+                    <div className="alert error">
+                        <i className="fa-solid fa-circle-exclamation"></i> {displayError}
                     </div>
                 )}
 
                 <button type="submit" disabled={isLoading}>
-                    {isLoading ? 'Registering...' : 'Register'}
+                    {isLoading ? (
+                        <>
+                            <i className="fa-solid fa-spinner fa-spin"></i> Creating Account...
+                        </>
+                    ) : (
+                        <>
+                            <i className="fa-solid fa-user-plus"></i> Create Account
+                        </>
+                    )}
                 </button>
             </form>
+
+            <div className="auth-links">
+                <p>
+                    <i className="fa-solid fa-right-to-bracket"></i>
+                    Already have an account?{' '}
+                    <Link to="/login" className="signup-link">
+                        Log in
+                    </Link>
+                </p>
+            </div>
         </div>
     );
 };
