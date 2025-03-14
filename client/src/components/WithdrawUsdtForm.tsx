@@ -15,7 +15,7 @@ function WithdrawUsdtForm() {
     const queryClient = useQueryClient();
 
     // Fetch wallet data to show current balance
-    const { data: wallets } = useQuery({
+    const { data: wallets, isLoading: isLoadingWallets } = useQuery({
         queryKey: ['wallets'],
         queryFn: async () => {
             const response = await fetch('/api/wallet');
@@ -107,17 +107,44 @@ function WithdrawUsdtForm() {
 
     return (
         <div>
-            {usdtWallet ? (
-                <div className="wallet-info">
-                    <strong>Available Balance:</strong> {usdtBalance} USDT
+            <h3>Withdraw USDT</h3>
+            
+            {/* Balance Display */}
+            {isLoadingWallets ? (
+                <div className="loading-spinner" role="status" aria-label="Loading wallet balance">
+                    <span className="sr-only">Loading your wallet balance...</span>
+                </div>
+            ) : usdtWallet ? (
+                <div className="wallet-balance">
+                    <strong>Available Balance:</strong> <span className="balance-amount">{usdtBalance} USDT</span>
                 </div>
             ) : (
-                <div className="alert warning">
-                    You need to create a USDT wallet first
+                <div className="verification-banner" role="alert">
+                    <div className="message">
+                        <span role="img" aria-label="Warning">⚠️</span> You need to create a USDT wallet first
+                    </div>
                 </div>
             )}
             
-            <form onSubmit={handleSubmit} className="withdraw-form">
+            {/* Success/Error Messages */}
+            {successMessage && (
+                <div className="verification-banner" style={{ backgroundColor: '#e6f7ef', borderColor: '#84e1bc' }} role="alert">
+                    <div className="message" style={{ color: '#0d7d4d' }}>
+                        <span role="img" aria-label="Success">✅</span> {successMessage}
+                    </div>
+                </div>
+            )}
+            
+            {error && (
+                <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                    <div className="message" style={{ color: '#b91c1c' }}>
+                        <span role="img" aria-label="Error">❌</span> {error}
+                    </div>
+                </div>
+            )}
+            
+            {/* Withdrawal Form */}
+            <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label htmlFor="amount">Amount (USDT):</label>
                     <input
@@ -125,11 +152,13 @@ function WithdrawUsdtForm() {
                         type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
-                        placeholder="Enter amount"
+                        placeholder="Enter withdrawal amount"
                         required
                         disabled={!usdtWallet}
+                        aria-describedby={error ? "amount-error" : undefined}
                     />
                 </div>
+                
                 <div className="form-group">
                     <label htmlFor="walletAddress">Destination Wallet Address:</label>
                     <input
@@ -137,24 +166,35 @@ function WithdrawUsdtForm() {
                         type="text"
                         value={walletAddress}
                         onChange={(e) => setWalletAddress(e.target.value)}
-                        placeholder="Enter wallet address"
+                        placeholder="Enter TRC20 wallet address"
                         required
                         disabled={!usdtWallet}
+                        aria-describedby={error ? "address-error" : undefined}
                     />
                 </div>
-                {error && <div className="alert error">{error}</div>}
-                {successMessage && <div className="alert success">{successMessage}</div>}
+                
                 <button 
                     type="submit" 
                     disabled={isLoading || !usdtWallet}
                     className="button"
+                    aria-busy={isLoading}
                 >
                     {isLoading ? 'Processing...' : 'Request Withdrawal'}
                 </button>
             </form>
+            
             <div className="instructions">
-                <p><strong>Important:</strong> Withdrawal requests are subject to admin approval. Your funds will not be deducted until your request is approved.</p>
-                <p>Please double-check the destination wallet address before submitting. We cannot recover funds sent to incorrect addresses.</p>
+                <div className="verification-banner" style={{ marginTop: '20px', backgroundColor: '#fff7ed', borderColor: '#fdba74' }}>
+                    <div className="message" style={{ color: '#9a3412' }}>
+                        <span role="img" aria-label="Important">ℹ️</span> <strong>Important Information:</strong>
+                        <ul style={{ marginTop: '8px', paddingLeft: '20px' }}>
+                            <li>Withdrawal requests are subject to admin approval</li>
+                            <li>Your funds will not be deducted until your request is approved</li>
+                            <li>Double-check the destination wallet address before submitting</li>
+                            <li>We cannot recover funds sent to incorrect addresses</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     );

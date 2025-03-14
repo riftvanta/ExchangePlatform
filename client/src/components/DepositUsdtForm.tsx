@@ -200,100 +200,118 @@ function DepositUsdtForm() {
         : null;
 
     return (
-        <div className="deposit-form-container">
-            <h2>Deposit USDT</h2>
-            
+        <div>
             {/* Deposit Address Section */}
             <div className="deposit-address-section">
                 <h3>Your Personal USDT Deposit Address (TRC20)</h3>
                 
                 {isLoadingAddresses || isAddressLoading ? (
-                    <div className="loading">Loading your deposit address...</div>
+                    <div className="loading-spinner" role="status" aria-label="Loading deposit address">
+                        <span className="sr-only">Loading your deposit address...</span>
+                    </div>
                 ) : addressError ? (
-                    <div className="alert error">Error loading deposit address</div>
+                    <div className="verification-banner" role="alert">
+                        <div className="message">
+                            <span role="img" aria-label="Error">❌</span> Error loading deposit address
+                        </div>
+                    </div>
                 ) : !userAddress ? (
-                    <div className="alert warning">
-                        No deposit address found. 
+                    <div className="verification-banner" role="alert">
+                        <div className="message">
+                            <span role="img" aria-label="Warning">⚠️</span> No deposit address found.
+                        </div>
                         <button 
                             onClick={() => createAddressMutation.mutate()}
                             disabled={createAddressMutation.isPending}
-                            className="button small"
+                            className="button"
                         >
                             Generate Address
                         </button>
                     </div>
                 ) : (
-                    <div className="deposit-address-card">
-                        <div className="address-display">
-                            <span className="address-text">{userAddress.address}</span>
+                    <div className="address-container" style={{ marginBottom: '20px' }}>
+                        <div className="wallet-address">
+                            {userAddress.address}
                             <button 
                                 onClick={() => copyAddressToClipboard(userAddress.address)}
-                                className="copy-button"
+                                className="copy-btn"
                                 title="Copy to clipboard"
+                                aria-label="Copy address to clipboard"
                             >
                                 {isCopied ? '✓ Copied' : 'Copy'}
                             </button>
                         </div>
-                        <div className="address-info">
+                        <div style={{ marginTop: '10px' }}>
                             <p><strong>Network:</strong> TRC20 (TRON)</p>
-                            <p><strong>Important:</strong> Send only USDT to this address. Sending any other currency may result in permanent loss.</p>
+                            <p className="verification-banner" style={{ padding: '8px', marginTop: '10px' }}>
+                                <span role="img" aria-label="Important">⚠️</span> <strong>Important:</strong> Send only USDT to this address. Sending any other currency may result in permanent loss.
+                            </p>
                         </div>
                     </div>
                 )}
             </div>
             
+            {/* Success/Error Messages */}
+            {successMessage && (
+                <div className="verification-banner" style={{ backgroundColor: '#e6f7ef', borderColor: '#84e1bc' }} role="alert">
+                    <div className="message" style={{ color: '#0d7d4d' }}>
+                        <span role="img" aria-label="Success">✅</span> {successMessage}
+                    </div>
+                </div>
+            )}
+            
+            {error && (
+                <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                    <div className="message" style={{ color: '#b91c1c' }}>
+                        <span role="img" aria-label="Error">❌</span> {error}
+                    </div>
+                </div>
+            )}
+            
             {/* Deposit Form */}
-            <form onSubmit={handleSubmit} className="deposit-form">
+            <form onSubmit={handleSubmit}>
                 <div className="form-group">
                     <label htmlFor="amount">Amount:</label>
                     <input
-                        type="text"
                         id="amount"
+                        type="text"
                         value={amount}
                         onChange={(e) => setAmount(e.target.value)}
                         required
+                        placeholder="Enter USDT amount"
                     />
                 </div>
+                
                 <div className="form-group">
                     <label htmlFor="transactionHash">Transaction Hash:</label>
                     <input
-                        type="text"
                         id="transactionHash"
+                        type="text"
                         value={transactionHash}
                         onChange={(e) => setTransactionHash(e.target.value)}
                         required
+                        placeholder="Enter the transaction hash"
                     />
                 </div>
+                
                 <div className="form-group">
-                    <label htmlFor="file">Deposit Screenshot:</label>
+                    <label htmlFor="depositScreenshot">Deposit Screenshot:</label>
                     <input
+                        id="depositScreenshot"
                         type="file"
-                        id="file"
                         accept="image/*"
                         onChange={handleFileChange}
-                        required
+                        required={!fileKey}
                     />
-                    {file && (
-                        <div className="file-info">File selected: {file.name}</div>
-                    )}
-                    {fileKey && (
-                        <div className="alert success">
-                            File uploaded successfully
-                        </div>
-                    )}
+                    {file && <div className="file-name">Selected file: {file.name}</div>}
                 </div>
-                {error && <div className="alert error">{error}</div>}
-                {successMessage && (
-                    <div className="alert success">{successMessage}</div>
-                )}
-                <button 
-                    type="submit" 
-                    disabled={depositMutation.isPending}
+                
+                <button
+                    type="submit"
+                    disabled={depositMutation.isPending || !fileKey}
                     className="button"
                 >
-                    {depositMutation.isPending
-                        ? 'Submitting Deposit...'
-                        : 'Deposit USDT'}
+                    {depositMutation.isPending ? 'Processing...' : 'Deposit USDT'}
                 </button>
             </form>
         </div>

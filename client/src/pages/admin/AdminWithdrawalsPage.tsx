@@ -21,12 +21,12 @@ interface EnhancedWithdrawal {
     rejectionReason?: string | null;
 }
 
+type WithdrawalsByUser = Record<string, EnhancedWithdrawal[]>;
+
 function AdminWithdrawalsPage() {
     const [error, setError] = useState<string | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
-    const [rejectingTransactionId, setRejectingTransactionId] = useState<
-        string | null
-    >(null);
+    const [rejectingWithdrawalId, setRejectingWithdrawalId] = useState<string | null>(null);
     const socket = useSocketStore(state => state.socket);
 
     const {
@@ -47,28 +47,38 @@ function AdminWithdrawalsPage() {
 
     const queryClient = useQueryClient();
 
+    // Group withdrawals by user
+    const withdrawalsByUser: WithdrawalsByUser = pendingWithdrawals ? 
+        pendingWithdrawals.reduce((grouped, withdrawal) => {
+            if (!grouped[withdrawal.userId]) {
+                grouped[withdrawal.userId] = [];
+            }
+            grouped[withdrawal.userId].push(withdrawal);
+            return grouped;
+        }, {} as WithdrawalsByUser) : {};
+
     // Subscribe to real-time new pending transaction notifications
     useEffect(() => {
         if (!socket) return;
         
         // Handle new pending transaction notification
         const handleNewPendingTransaction = (data: TransactionUpdateData) => {
-            // Only show notification for withdrawal transactions
-            if (data.type !== 'withdrawal') return;
+            console.log('New pending transaction received:', data);
             
-            console.log('New pending withdrawal received:', data);
-            
-            // Show toast notification
-            toast.info(`New pending withdrawal of ${data.amount} ${data.currency} received!`, {
-                onClick: () => {
-                    // Refresh the data when clicking on the notification
-                    queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
-                    window.scrollTo(0, 0); // Scroll to top to see the new transaction
-                }
-            });
-            
-            // Refresh the data automatically
-            queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
+            // Only show notification for withdrawals
+            if (data.type === 'withdrawal') {
+                // Show toast notification
+                toast.info(`New pending withdrawal of ${data.amount} ${data.currency} received!`, {
+                    onClick: () => {
+                        // Refresh the data when clicking on the notification
+                        queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
+                        window.scrollTo(0, 0); // Scroll to top to see the new withdrawal
+                    }
+                });
+                
+                // Refresh the data automatically
+                queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
+            }
         };
         
         // Listen for new pending transactions
@@ -81,9 +91,9 @@ function AdminWithdrawalsPage() {
     }, [socket, queryClient]);
 
     const approveMutation = useMutation({
-        mutationFn: async (transactionId: string) => {
+        mutationFn: async (withdrawalId: string) => {
             const response = await fetch(
-                `/api/admin/withdrawals/${transactionId}/approve`,
+                `/api/admin/withdrawals/${withdrawalId}/approve`,
                 {
                     method: 'POST',
                     headers: {
@@ -99,8 +109,8 @@ function AdminWithdrawalsPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
-            setError(null);
             toast.success('Withdrawal approved successfully');
+            setError(null);
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to approve withdrawal');
@@ -110,14 +120,14 @@ function AdminWithdrawalsPage() {
 
     const rejectMutation = useMutation({
         mutationFn: async ({
-            transactionId,
+            withdrawalId,
             rejectionReason,
         }: {
-            transactionId: string;
+            withdrawalId: string;
             rejectionReason: string;
         }) => {
             const response = await fetch(
-                `/api/admin/withdrawals/${transactionId}/reject`,
+                `/api/admin/withdrawals/${withdrawalId}/reject`,
                 {
                     method: 'POST',
                     headers: {
@@ -134,8 +144,8 @@ function AdminWithdrawalsPage() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
-            setError(null);
             toast.success('Withdrawal rejected successfully');
+            setError(null);
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to reject withdrawal');
@@ -143,172 +153,195 @@ function AdminWithdrawalsPage() {
         },
     });
 
-    const handleApprove = (transactionId: string) => {
-        approveMutation.mutate(transactionId);
+    const handleApprove = (withdrawalId: string) => {
+        approveMutation.mutate(withdrawalId);
     };
 
-    const handleReject = (transactionId: string) => {
-        setRejectingTransactionId(transactionId);
+    const handleReject = (withdrawalId: string) => {
+        setRejectingWithdrawalId(withdrawalId);
+        setRejectionReason('');
         setError(null);
     };
 
     const handleConfirmReject = async () => {
-        if (rejectingTransactionId) {
+        if (rejectingWithdrawalId) {
             try {
                 await rejectMutation.mutateAsync({
-                    transactionId: rejectingTransactionId,
+                    withdrawalId: rejectingWithdrawalId,
                     rejectionReason,
                 });
             } finally {
-                setRejectingTransactionId(null);
+                setRejectingWithdrawalId(null);
                 setRejectionReason('');
             }
         }
     };
 
     const handleCancelReject = () => {
-        setRejectingTransactionId(null);
+        setRejectingWithdrawalId(null);
         setRejectionReason('');
     };
 
+    // Format date to a more readable format
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const options: Intl.DateTimeFormatOptions = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return new Intl.DateTimeFormat('en-US', options).format(date);
+    };
+
     if (isLoading) {
-        return <div>Loading pending withdrawals...</div>;
+        return (
+            <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <span>Loading pending withdrawals...</span>
+            </div>
+        );
     }
 
     if (isError) {
-        return <div>Error loading pending withdrawals</div>;
+        return (
+            <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                <div className="message" style={{ color: '#b91c1c' }}>
+                    <span role="img" aria-label="Error">❌</span> Error loading pending withdrawals
+                </div>
+            </div>
+        );
     }
 
-    // Group withdrawals by user
-    const withdrawalsByUser = pendingWithdrawals?.reduce((acc, withdrawal) => {
-        if (!acc[withdrawal.userId]) {
-            acc[withdrawal.userId] = [];
-        }
-        acc[withdrawal.userId].push(withdrawal);
-        return acc;
-    }, {} as Record<string, EnhancedWithdrawal[]>);
-
     return (
-        <div>
-            <h2>Pending Withdrawals (Admin)</h2>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="admin-page-container">
+            <h2 className="admin-page-title">Pending Withdrawals (Admin)</h2>
 
-            {rejectingTransactionId && (
-                <div className="rejection-form" style={{ 
-                    marginBottom: '20px',
-                    padding: '15px',
-                    border: '1px solid #ccc',
-                    borderRadius: '5px',
-                    backgroundColor: '#f9f9f9'
-                }}>
-                    <p>
-                        <strong>Reason for rejecting withdrawal:</strong>
-                    </p>
+            {error && (
+                <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                    <div className="message" style={{ color: '#b91c1c' }}>
+                        <span role="img" aria-label="Error">❌</span> {error}
+                    </div>
+                </div>
+            )}
+
+            {rejectingWithdrawalId && (
+                <div className="rejection-form">
+                    <h3>Reject Withdrawal</h3>
+                    <p>Please provide a reason for rejecting this withdrawal:</p>
                     <textarea
+                        className="rejection-reason-input"
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
-                        style={{ width: '100%', minHeight: '80px' }}
-                        placeholder="Provide a reason for rejection..."
+                        placeholder="Enter rejection reason"
+                        rows={3}
                     />
-                    <div style={{ marginTop: '10px' }}>
+                    <div className="rejection-buttons">
                         <button
+                            className="button danger"
                             onClick={handleConfirmReject}
                             disabled={rejectMutation.isPending || !rejectionReason.trim()}
-                            style={{ marginRight: '10px' }}
                         >
-                            {rejectMutation.isPending
-                                ? 'Rejecting...'
-                                : 'Confirm Rejection'}
+                            {rejectMutation.isPending ? (
+                                <>
+                                    <span className="loading-spinner-small" aria-hidden="true"></span>
+                                    <span>Rejecting...</span>
+                                </>
+                            ) : 'Confirm Rejection'}
                         </button>
-                        <button onClick={handleCancelReject}>Cancel</button>
+                        <button className="button secondary" onClick={handleCancelReject}>Cancel</button>
                     </div>
                 </div>
             )}
 
             {!pendingWithdrawals || pendingWithdrawals.length === 0 ? (
-                <p>No pending withdrawals to review.</p>
+                <div className="verification-banner" style={{ backgroundColor: '#e0f2fe', borderColor: '#7dd3fc' }} role="alert">
+                    <div className="message" style={{ color: '#0c4a6e' }}>
+                        <span role="img" aria-label="Information">ℹ️</span> No pending withdrawals to review.
+                    </div>
+                </div>
             ) : (
                 Object.entries(withdrawalsByUser || {}).map(([userId, userWithdrawals]) => (
-                    <div key={userId} className="user-withdrawals" style={{ 
-                        marginBottom: '30px',
-                        border: '1px solid #eee',
-                        borderRadius: '5px',
-                        padding: '15px'
-                    }}>
-                        <h3>User ID: {userId}</h3>
+                    <div key={userId} className="user-withdrawals-section">
+                        <h3 className="user-id-heading">User ID: {userId}</h3>
                         
                         {/* User balance info */}
-                        <div className="balance-info" style={{ 
-                            backgroundColor: '#f3f3f3',
-                            padding: '10px',
-                            marginBottom: '15px',
-                            borderRadius: '5px'
-                        }}>
-                            <p>
-                                <strong>Current Balance:</strong> {userWithdrawals[0].currentBalance} USDT
-                            </p>
-                            <p>
-                                <strong>Available Balance (after all pending):</strong> {userWithdrawals[0].availableBalance} USDT
-                            </p>
-                            <p style={{ fontSize: '0.9em', color: '#666' }}>
-                                Note: Withdrawals are processed in chronological order. Some withdrawals may be 
+                        <div className="balance-info-card">
+                            <div className="balance-info-item">
+                                <span className="balance-label">Current Balance:</span>
+                                <span className="balance-value">{userWithdrawals[0].currentBalance} USDT</span>
+                            </div>
+                            <div className="balance-info-item">
+                                <span className="balance-label">Available Balance (after all pending):</span>
+                                <span className="balance-value">{userWithdrawals[0].availableBalance} USDT</span>
+                            </div>
+                            <div className="balance-info-note">
+                                <span role="img" aria-label="Note">ℹ️</span> Withdrawals are processed in chronological order. Some withdrawals may be 
                                 disabled if approving earlier withdrawals would make funds insufficient.
-                            </p>
+                            </div>
                         </div>
                         
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <thead>
-                                <tr>
-                                    <th>Request Date</th>
-                                    <th>Amount (USDT)</th>
-                                    <th>Destination Address</th>
-                                    <th>Can Approve?</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {userWithdrawals.map((withdrawal) => (
-                                    <tr key={withdrawal.id} style={{ 
-                                        backgroundColor: withdrawal.canApprove ? 'transparent' : '#fff0f0'
-                                    }}>
-                                        <td>{new Date(withdrawal.createdAt).toLocaleString()}</td>
-                                        <td>{withdrawal.amount}</td>
-                                        <td style={{ wordBreak: 'break-all' }}>
-                                            {withdrawal.walletAddress}
-                                        </td>
-                                        <td>
-                                            {withdrawal.canApprove ? (
-                                                <span style={{ color: 'green' }}>Yes</span>
-                                            ) : (
-                                                <span style={{ color: 'red' }}>No - Insufficient Balance</span>
-                                            )}
-                                        </td>
-                                        <td>
-                                            <button
-                                                onClick={() => handleApprove(withdrawal.id)}
-                                                disabled={
-                                                    approveMutation.isPending ||
-                                                    rejectMutation.isPending ||
-                                                    !withdrawal.canApprove
-                                                }
-                                                style={{ marginRight: '10px' }}
-                                            >
-                                                {approveMutation.isPending ? 'Processing...' : 'Approve'}
-                                            </button>
-                                            <button
-                                                onClick={() => handleReject(withdrawal.id)}
-                                                disabled={
-                                                    approveMutation.isPending ||
-                                                    rejectMutation.isPending
-                                                }
-                                            >
-                                                Reject
-                                            </button>
-                                        </td>
+                        <div className="transaction-table-container">
+                            <table className="transaction-table">
+                                <thead>
+                                    <tr>
+                                        <th>Request Date</th>
+                                        <th>Amount</th>
+                                        <th>Destination Address</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {userWithdrawals.map((withdrawal) => (
+                                        <tr key={withdrawal.id} className={`transaction-row ${withdrawal.canApprove ? '' : 'insufficient'}`}>
+                                            <td className="date">{formatDate(withdrawal.createdAt)}</td>
+                                            <td className="amount">{withdrawal.amount} USDT</td>
+                                            <td className="wallet-address-cell">
+                                                <div className="wallet-address-container">
+                                                    {withdrawal.walletAddress}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {withdrawal.canApprove ? (
+                                                    <span className="status-badge success">Available</span>
+                                                ) : (
+                                                    <span className="status-badge error">Insufficient Balance</span>
+                                                )}
+                                            </td>
+                                            <td className="actions">
+                                                <div className="action-buttons">
+                                                    <button
+                                                        className="action-btn approve"
+                                                        onClick={() => handleApprove(withdrawal.id)}
+                                                        disabled={
+                                                            approveMutation.isPending ||
+                                                            rejectMutation.isPending ||
+                                                            !withdrawal.canApprove
+                                                        }
+                                                        title={withdrawal.canApprove ? "Approve this withdrawal" : "Cannot approve - insufficient balance"}
+                                                    >
+                                                        {approveMutation.isPending ? 'Processing...' : 'Approve'}
+                                                    </button>
+                                                    <button
+                                                        className="action-btn reject"
+                                                        onClick={() => handleReject(withdrawal.id)}
+                                                        disabled={
+                                                            approveMutation.isPending ||
+                                                            rejectMutation.isPending
+                                                        }
+                                                        title="Reject this withdrawal"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 ))
             )}

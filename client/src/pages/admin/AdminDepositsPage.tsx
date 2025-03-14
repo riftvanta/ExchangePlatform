@@ -197,115 +197,161 @@ function AdminDepositsPage() {
         setViewingTransactionId(null);
     };
 
+    // Format date to a more readable format
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        const options: Intl.DateTimeFormatOptions = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return new Intl.DateTimeFormat('en-US', options).format(date);
+    };
+
     if (isLoading) {
-        return <div>Loading pending deposits...</div>;
+        return (
+            <div className="loading-container">
+                <div className="loading-spinner"></div>
+                <span>Loading pending deposits...</span>
+            </div>
+        );
     }
 
     if (isError) {
-        return <div>Error loading pending deposits</div>;
+        return (
+            <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                <div className="message" style={{ color: '#b91c1c' }}>
+                    <span role="img" aria-label="Error">❌</span> Error loading pending deposits
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div>
-            <h2>Pending Deposits (Admin)</h2>
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+        <div className="admin-page-container">
+            <h2 className="admin-page-title">Pending Deposits (Admin)</h2>
+            
+            {error && (
+                <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                    <div className="message" style={{ color: '#b91c1c' }}>
+                        <span role="img" aria-label="Error">❌</span> {error}
+                    </div>
+                </div>
+            )}
 
             {rejectingTransactionId && (
-                <div>
-                    <p>
-                        Reason for rejecting transaction{' '}
-                        {rejectingTransactionId}:
-                    </p>
+                <div className="rejection-form">
+                    <h3>Reject Deposit</h3>
+                    <p>Please provide a reason for rejecting this deposit:</p>
                     <textarea
+                        className="rejection-reason-input"
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Enter rejection reason"
+                        rows={3}
                     />
-                    <button
-                        onClick={handleConfirmReject}
-                        disabled={rejectMutation.isPending}
-                    >
-                        {rejectMutation.isPending
-                            ? 'Rejecting...'
-                            : 'Confirm Rejection'}
-                    </button>
-                    <button onClick={handleCancelReject}>Cancel</button>
+                    <div className="rejection-buttons">
+                        <button
+                            className="button danger"
+                            onClick={handleConfirmReject}
+                            disabled={rejectMutation.isPending || !rejectionReason.trim()}
+                        >
+                            {rejectMutation.isPending ? (
+                                <>
+                                    <span className="loading-spinner-small" aria-hidden="true"></span>
+                                    <span>Rejecting...</span>
+                                </>
+                            ) : 'Confirm Rejection'}
+                        </button>
+                        <button className="button secondary" onClick={handleCancelReject}>Cancel</button>
+                    </div>
                 </div>
             )}
 
             {imageUrl && viewingTransactionId && (
-                <div>
-                    <p>Deposit Image:</p>
-                    <img
-                        src={imageUrl}
-                        alt="Deposit Receipt"
-                        style={{ maxWidth: '500px', maxHeight: '500px' }}
-                    />
-                    <button onClick={handleCloseImage}>Close Image</button>
+                <div className="deposit-image-container">
+                    <div className="deposit-image-header">
+                        <h3>Deposit Image</h3>
+                        <button className="close-btn" onClick={handleCloseImage}>×</button>
+                    </div>
+                    <div className="deposit-image-wrapper">
+                        <img
+                            src={imageUrl}
+                            alt="Deposit Receipt"
+                            className="deposit-image"
+                        />
+                    </div>
+                    <div className="deposit-image-footer">
+                        <button className="button" onClick={handleCloseImage}>Close Image</button>
+                    </div>
                 </div>
             )}
 
-            <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>User ID</th>
-                        <th>Wallet ID</th>
-                        <th>Type</th>
-                        <th>Currency</th>
-                        <th>Amount</th>
-                        <th>Transaction Hash</th>
-                        <th>File Key</th>
-                        <th>Created At</th>
-                        <th>Updated At</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {pendingDeposits?.map((transaction) => (
-                        <tr key={transaction.id}>
-                            <td>{transaction.id}</td>
-                            <td>{transaction.userId}</td>
-                            <td>{transaction.walletId}</td>
-                            <td>{transaction.type}</td>
-                            <td>{transaction.currency}</td>
-                            <td>{transaction.amount}</td>
-                            <td>{transaction.transactionHash}</td>
-                            <td>{transaction.fileKey}</td>
-                            <td>{transaction.createdAt}</td>
-                            <td>{transaction.updatedAt}</td>
-                            <td>{transaction.status}</td>
-                            <td>
-                                <button
-                                    onClick={() =>
-                                        handleApprove(transaction.id)
-                                    }
-                                    disabled={
-                                        approveMutation.isPending ||
-                                        rejectMutation.isPending
-                                    }
-                                >
-                                    {approveMutation.isPending
-                                        ? 'Approving...'
-                                        : 'Approve'}
-                                </button>
-                                <button
-                                    onClick={() => handleReject(transaction.id)}
-                                >
-                                    Reject
-                                </button>
-                                <button
-                                    onClick={() =>
-                                        handleViewImage(transaction.id)
-                                    }
-                                >
-                                    View Image
-                                </button>
-                            </td>
+            <div className="transaction-table-container">
+                <table className="transaction-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Currency</th>
+                            <th>Amount</th>
+                            <th>Created At</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-                    ))}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {pendingDeposits?.map((transaction) => (
+                            <tr key={transaction.id} className="transaction-row">
+                                <td>{transaction.type}</td>
+                                <td>{transaction.currency}</td>
+                                <td className="amount">{transaction.amount}</td>
+                                <td className="date">{formatDate(transaction.createdAt)}</td>
+                                <td>
+                                    <span className="status-badge pending">
+                                        {transaction.status}
+                                    </span>
+                                </td>
+                                <td className="actions">
+                                    <div className="action-buttons">
+                                        <button
+                                            className="action-btn approve"
+                                            onClick={() => handleApprove(transaction.id)}
+                                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                                            title="Approve this deposit"
+                                        >
+                                            {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                                        </button>
+                                        <button
+                                            className="action-btn reject"
+                                            onClick={() => handleReject(transaction.id)}
+                                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                                            title="Reject this deposit"
+                                        >
+                                            Reject
+                                        </button>
+                                        <button
+                                            className="action-btn view"
+                                            onClick={() => handleViewImage(transaction.id)}
+                                            title="View deposit screenshot"
+                                        >
+                                            View Image
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                        {(!pendingDeposits || pendingDeposits.length === 0) && (
+                            <tr>
+                                <td colSpan={7} className="no-data">
+                                    No pending deposits found
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 }

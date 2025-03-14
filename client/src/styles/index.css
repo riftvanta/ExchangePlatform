@@ -1,0 +1,85 @@
+/**
+ * Main CSS Entry Point
+ */
+
+/* First import our design tokens and utilities */
+@import './design-tokens.css';
+@import './utilities.css';
+@import './skeleton.css';
+@import './main.css';
+
+/* This file now serves as the main entry point for all styles.
+   We're using the main.css file for component styling and animations.
+   This allows for a clean separation of concerns between files. */
+
+/* Importing any legacy CSS if needed */
+/* @import './legacy/old-styles.css'; */
+
+/* Then Tailwind CSS directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Base HTML elements */
+html {
+  font-size: 16px;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--text-primary);
+  font-family: var(--font-family-base);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover, a:focus {
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Focus states for accessibility */
+a:focus, button:focus, input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* For screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* App-specific component styles */
+@layer components {
+  /* Add any app-specific component styles here that aren't covered by the design system */
+}
+
+/* App-specific utility styles */
+@layer utilities {
+  /* Add any app-specific utility styles here that aren't covered by the design system */
+} 

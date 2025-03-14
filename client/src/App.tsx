@@ -1,30 +1,35 @@
-import { ReactNode } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { ReactNode, lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ProfilePage from './pages/ProfilePage';
-import WalletBalances from './components/WalletBalances';
-import CreateWalletForm from './components/CreateWalletForm';
-import DepositUsdtForm from './components/DepositUsdtForm';
-import WithdrawUsdtForm from './components/WithdrawUsdtForm';
-import TransactionHistory from './components/TransactionHistory';
-import AdminDepositsPage from './pages/admin/AdminDepositsPage';
-import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage';
-import VerifyEmail from './pages/VerifyEmail';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import ResendVerification from './pages/ResendVerification';
-import JoyUIExamplePage from './pages/JoyUIExamplePage';
-import SpecializedComponentsPage from './pages/SpecializedComponentsPage';
-import { ToastContainer } from 'react-toastify';
+// Import only the components needed for initial load
+import { ToastContainer as CustomToastContainer } from './components/ui/Toast';
+import { PageTransition } from './components/ui/animation';
 import 'react-toastify/dist/ReactToastify.css';
+import { AnimatePresence } from 'framer-motion';
 
-// Import Joy UI components
-import { CssVarsProvider } from '@mui/joy/styles';
-import CssBaseline from '@mui/joy/CssBaseline';
-import theme from './theme';
-import { DashboardJoy } from './components/ui';
+// Lazy load pages that aren't needed immediately
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const ResendVerification = lazy(() => import('./pages/ResendVerification'));
+
+// Lazy load admin pages
+const AdminDepositsPage = lazy(() => import('./pages/admin/AdminDepositsPage'));
+const AdminWithdrawalsPage = lazy(() => import('./pages/admin/AdminWithdrawalsPage'));
+
+// Lazy load the Dashboard component
+const LazyDashboard = lazy(() => import('./components/LazyDashboard'));
+
+// Loading component for suspense fallback
+const LoadingFallback = () => (
+  <div className="page-loading" role="status" aria-live="polite">
+    <div className="loading-spinner" aria-hidden="true"></div>
+    <p>Loading...</p>
+  </div>
+);
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -36,7 +41,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
     const { user, isLoading } = useAuth();
 
     if (isLoading) {
-        return <div>Loading...</div>;
+        return <div role="status" aria-live="polite">Loading...</div>;
     }
 
     if (!user) {
@@ -50,132 +55,135 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 function AdminOnly({ children }: { children: ReactNode }) {
     const { user, isLoading } = useAuth();
 
-    if (isLoading) return <div>Loading...</div>;
+    if (isLoading) return <div role="status" aria-live="polite">Loading...</div>;
 
     if (!user?.isAdmin) {
-        return <div>Error: You are not authorized</div>;
+        return <div role="alert">Error: You are not authorized</div>;
     }
 
     return <>{children}</>;
 }
 
-// Simple Dashboard component - kept for reference but now redirects to Joy UI version
-const Dashboard = () => {
-    return <Navigate to="/" replace />;
-};
-
-function App() {
-    const location = window.location.pathname;
-    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/resend-verification'].includes(location);
+// Main App Content component - separated to use router hooks
+function AppContent() {
+    const location = useLocation();
+    const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/resend-verification'].includes(location.pathname);
     
     return (
-        <CssVarsProvider theme={theme} defaultMode="light">
-            {/* CssBaseline normalizes browser styles */}
-            <CssBaseline />
+        <div className={isAuthPage ? "App-auth" : "App"} role="application">
+            {/* Skip to content link for keyboard users */}
+            <a href="#main-content" className="skip-link">
+                Skip to content
+            </a>
             
-            <div className={isAuthPage ? "App-auth" : "App"}>
-                {!isAuthPage && (
-                    <div className="App-header">
-                        <h1>USDT-JOD Exchange Platform</h1>
-                    </div>
-                )}
+            {!isAuthPage && (
+                <header className="App-header" role="banner">
+                    <h1>USDT-JOD Exchange Platform</h1>
+                </header>
+            )}
 
-                <BrowserRouter>
-                    <Routes>
-                        {/* Public routes */}
-                        <Route path="/login" element={<LoginPage />} />
-                        <Route path="/register" element={<RegisterPage />} />
-                        {/* Email verification and password reset routes */}
-                        <Route path="/verify-email" element={<VerifyEmail />} />
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/reset-password" element={<ResetPassword />} />
-                        <Route path="/resend-verification" element={<ResendVerification />} />
+            <main id="main-content" tabIndex={-1}>
+                <AnimatePresence mode="wait">
+                    <Suspense fallback={<LoadingFallback />}>
+                        <Routes>
+                            {/* Public routes */}
+                            <Route path="/login" element={
+                                <PageTransition>
+                                    <LoginPage />
+                                </PageTransition>
+                            } />
+                            <Route path="/register" element={
+                                <PageTransition>
+                                    <RegisterPage />
+                                </PageTransition>
+                            } />
+                            {/* Email verification and password reset routes */}
+                            <Route path="/verify-email" element={
+                                <PageTransition>
+                                    <VerifyEmail />
+                                </PageTransition>
+                            } />
+                            <Route path="/forgot-password" element={
+                                <PageTransition>
+                                    <ForgotPassword />
+                                </PageTransition>
+                            } />
+                            <Route path="/reset-password" element={
+                                <PageTransition>
+                                    <ResetPassword />
+                                </PageTransition>
+                            } />
+                            <Route path="/resend-verification" element={
+                                <PageTransition>
+                                    <ResendVerification />
+                                </PageTransition>
+                            } />
 
-                        {/* Joy UI Example Page */}
-                        <Route
-                            path="/joy-ui-examples"
-                            element={
-                                <ProtectedRoute>
-                                    <JoyUIExamplePage />
-                                </ProtectedRoute>
-                            }
-                        />
+                            {/* Protected routes */}
+                            <Route
+                                path="/"
+                                element={
+                                    <ProtectedRoute>
+                                        <PageTransition>
+                                            <LazyDashboard />
+                                        </PageTransition>
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/profile"
+                                element={
+                                    <ProtectedRoute>
+                                        <PageTransition>
+                                            <ProfilePage />
+                                        </PageTransition>
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/admin/deposits"
+                                element={
+                                    <ProtectedRoute>
+                                        <AdminOnly>
+                                            <PageTransition>
+                                                <AdminDepositsPage />
+                                            </PageTransition>
+                                        </AdminOnly>
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route
+                                path="/admin/withdrawals"
+                                element={
+                                    <ProtectedRoute>
+                                        <AdminOnly>
+                                            <PageTransition>
+                                                <AdminWithdrawalsPage />
+                                            </PageTransition>
+                                        </AdminOnly>
+                                    </ProtectedRoute>
+                                }
+                            />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                        </Routes>
+                    </Suspense>
+                </AnimatePresence>
+            </main>
+            
+            {/* Screen reader announcer for dynamic content */}
+            <div id="screen-reader-announcer" className="sr-only" aria-live="polite" aria-atomic="true"></div>
+        </div>
+    );
+}
 
-                        {/* Specialized Components Page */}
-                        <Route
-                            path="/specialized-components"
-                            element={
-                                <ProtectedRoute>
-                                    <SpecializedComponentsPage />
-                                </ProtectedRoute>
-                            }
-                        />
-
-                        {/* Legacy Dashboard route - redirects to Joy UI Dashboard */}
-                        <Route
-                            path="/dashboard-legacy"
-                            element={
-                                <ProtectedRoute>
-                                    <Dashboard />
-                                </ProtectedRoute>
-                            }
-                        />
-
-                        {/* Protected routes */}
-                        <Route
-                            path="/"
-                            element={
-                                <ProtectedRoute>
-                                    <DashboardJoy />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/profile"
-                            element={
-                                <ProtectedRoute>
-                                    <ProfilePage />
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/admin/deposits"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminOnly>
-                                        <AdminDepositsPage />
-                                    </AdminOnly>
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route
-                            path="/admin/withdrawals"
-                            element={
-                                <ProtectedRoute>
-                                    <AdminOnly>
-                                        <AdminWithdrawalsPage />
-                                    </AdminOnly>
-                                </ProtectedRoute>
-                            }
-                        />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                </BrowserRouter>
-                
-                {/* Add Toast container for notifications */}
-                <ToastContainer
-                    position="top-right"
-                    autoClose={5000}
-                    hideProgressBar={false}
-                    newestOnTop
-                    closeOnClick
-                    rtl={false}
-                    pauseOnFocusLoss
-                    draggable
-                    pauseOnHover
-                />
-            </div>
-        </CssVarsProvider>
+// Root App component
+function App() {
+    return (
+        <BrowserRouter>
+            <AppContent />
+            {/* Use our enhanced Toast container for notifications */}
+            <CustomToastContainer />
+        </BrowserRouter>
     );
 }
 

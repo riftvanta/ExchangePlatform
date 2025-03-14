@@ -1,113 +1,327 @@
-# Joy UI Component Library
+# UI Component Library
 
-This directory contains a collection of Joy UI components for the USDT-JOD Exchange Platform. These components are designed to provide a consistent look and feel across the application while ensuring accessibility and usability.
+This directory contains a set of reusable UI components built with React, Tailwind CSS, and Headless UI. The components are designed to be accessible, customizable, and consistent with the application's design system.
 
-## Component Overview
+## Installation
 
-### Core Components
+The component library uses the following dependencies:
 
-These components serve as drop-in replacements for existing elements:
+- `class-variance-authority`: For component variants
+- `@headlessui/react`: For accessible UI primitives
+- `@heroicons/react`: For consistent iconography
 
-- **Button** - A Joy UI Button component with standardized styling and variants
-- **Alert** - A Joy UI Alert component for displaying messages and notifications
-- **Typography** - A Joy UI Typography component for consistent text styling
-- **FormControl** - A Joy UI FormControl component for form fields with labels and error states
-- **Input** - A Joy UI Input component for text input fields
-- **Table** - A Joy UI Table component for displaying tabular data
-- **Tabs** - A Joy UI Tabs component for tabbed interfaces
+Make sure these dependencies are installed:
 
-### Specialized Components
-
-These components provide additional functionality:
-
-- **DatePicker** - A Joy UI styled date picker component using MUI X Date Pickers
-- **FileUpload** - A drag-and-drop file upload component with validation
-- **Notification** - A toast notification system that integrates with react-toastify
-- **Modal** - A dialog component for displaying content in a modal
-
-## Usage
-
-Import components from the UI component library:
-
-```tsx
-import { 
-  Button, 
-  Alert, 
-  Typography, 
-  FormControl, 
-  Input,
-  DatePicker,
-  FileUpload,
-  Notification,
-  NotificationContainer
-} from '../components/ui';
+```bash
+npm install class-variance-authority @headlessui/react @heroicons/react
 ```
 
-Then use them in your components:
+## Available Components
+
+### Button
+
+A versatile button component with multiple variants, sizes, and states.
 
 ```tsx
-// Basic button
-<Button>Click me</Button>
+import { Button } from './components/ui';
 
-// Date picker with min/max constraints
-<DatePicker
-  label="Select Date"
-  value={selectedDate}
-  onChange={handleDateChange}
-  minDate={new Date(2023, 0, 1)}
-  maxDate={new Date(2025, 11, 31)}
-  helperText="Date range: Jan 1, 2023 - Dec 31, 2025"
-/>
+// Basic usage
+<Button>Default Button</Button>
 
-// File upload with validation
-<FileUpload
-  label="Upload Files"
-  accept=".jpg,.jpeg,.png,.pdf"
-  maxSize={5 * 1024 * 1024} // 5MB
-  onFileSelect={handleFileSelect}
-  buttonText="Select Files"
-  dropzoneText="or drop files here"
-  helperText="Max file size: 5MB"
-/>
+// Variants
+<Button variant="primary">Primary Button</Button>
+<Button variant="secondary">Secondary Button</Button>
+<Button variant="success">Success Button</Button>
+<Button variant="warning">Warning Button</Button>
+<Button variant="error">Error Button</Button>
+<Button variant="outline">Outline Button</Button>
+<Button variant="ghost">Ghost Button</Button>
+<Button variant="link">Link Button</Button>
 
-// Show notifications
-Notification.success('Operation completed successfully', 'Success');
-Notification.error('Something went wrong', 'Error');
+// Sizes
+<Button size="xs">Extra Small</Button>
+<Button size="sm">Small</Button>
+<Button size="md">Medium</Button>
+<Button size="lg">Large</Button>
+<Button size="xl">Extra Large</Button>
+
+// States
+<Button loading>Loading</Button>
+<Button disabled>Disabled</Button>
+
+// With icons
+<Button leftIcon={<Icon />}>With Left Icon</Button>
+<Button rightIcon={<Icon />}>With Right Icon</Button>
+
+// Full width
+<Button fullWidth>Full Width Button</Button>
 ```
 
-## Migration Strategy
+### Input
 
-To migrate existing components to Joy UI:
+A flexible input component with support for labels, icons, and validation states.
 
-1. **Analyze existing component** - Understand the current functionality and styling
-2. **Create Joy UI version** - Implement a new component using Joy UI components
-3. **Maintain compatibility** - Ensure the new component supports the same props and event handlers
-4. **Test in isolation** - Verify the component works as expected in the example page
-5. **Integrate gradually** - Replace old components with new ones in specific pages first
-6. **Validate and refine** - Get feedback and refine the components as needed
+```tsx
+import { Input } from './components/ui';
 
-## Theming
+// Basic usage
+<Input 
+  label="Email" 
+  placeholder="Enter your email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+/>
 
-The Joy UI theme is defined in `client/src/theme.ts`. It includes:
+// With helper text
+<Input 
+  label="Username" 
+  helperText="Your username must be 5-20 characters"
+/>
 
-- Color palette with primary, neutral, danger, success, and warning colors
-- Typography styles for various text levels
-- Component-specific styling overrides
-- Dark mode support
+// With error
+<Input 
+  label="Password" 
+  type="password"
+  error="Password is required"
+/>
 
-## Accessibility Features
+// With icons
+<Input 
+  label="Search" 
+  leftIcon={<SearchIcon />}
+/>
+<Input 
+  label="Website" 
+  rightIcon={<LinkIcon />}
+/>
 
-These components are designed with accessibility in mind:
+// Disabled
+<Input 
+  label="Read Only Field" 
+  disabled
+/>
 
-- Proper ARIA attributes for interactive elements
-- Keyboard navigation support
-- High contrast color options
-- Focus indicators
-- Screen reader friendly markup
+// Full width
+<Input 
+  label="Full Width" 
+  fullWidth
+/>
+```
 
-## Examples
+### Select
 
-Visit these pages to see the components in action:
+A dropdown select component built with Headless UI for accessibility.
 
-- `/joy-ui-examples` - Shows basic Joy UI components
-- `/specialized-components` - Demonstrates specialized components like DatePicker and FileUpload 
+```tsx
+import { Select } from './components/ui';
+
+const options = [
+  { value: 'option1', label: 'Option 1' },
+  { value: 'option2', label: 'Option 2' },
+  { value: 'option3', label: 'Option 3' },
+  { value: 'option4', label: 'Option 4 (Disabled)', disabled: true }
+];
+
+// Basic usage
+<Select
+  label="Select an option"
+  options={options}
+  value={selectedValue}
+  onChange={setValue}
+/>
+
+// With helper text
+<Select
+  label="Select Country"
+  options={countries}
+  helperText="Select your country of residence"
+  value={country}
+  onChange={setCountry}
+/>
+
+// With error
+<Select
+  label="Select Role"
+  options={roles}
+  error="Please select a role"
+  value={role}
+  onChange={setRole}
+/>
+
+// Disabled
+<Select
+  label="Disabled Select"
+  options={options}
+  disabled
+  value=""
+  onChange={() => {}}
+/>
+```
+
+### Card
+
+A card component with optional header and footer sections.
+
+```tsx
+import { Card, CardHeader, CardBody, CardFooter } from './components/ui';
+
+// Basic usage
+<Card>
+  <CardBody>
+    Card content goes here
+  </CardBody>
+</Card>
+
+// With header and footer
+<Card>
+  <CardHeader>
+    Card Title
+  </CardHeader>
+  <CardBody>
+    Card content goes here
+  </CardBody>
+  <CardFooter>
+    <Button>Action</Button>
+  </CardFooter>
+</Card>
+```
+
+### Checkbox
+
+An accessible checkbox component with support for labels and descriptions.
+
+```tsx
+import { Checkbox } from './components/ui';
+
+// Basic usage
+<Checkbox 
+  label="Accept terms" 
+  checked={isChecked}
+  onChange={(e) => setIsChecked(e.target.checked)}
+/>
+
+// With description
+<Checkbox 
+  label="Subscribe to newsletter" 
+  description="Receive weekly updates about our products"
+  checked={isSubscribed}
+  onChange={(e) => setIsSubscribed(e.target.checked)}
+/>
+
+// With error
+<Checkbox 
+  label="Agree to terms" 
+  error="You must agree to the terms"
+  checked={agreed}
+  onChange={(e) => setAgreed(e.target.checked)}
+/>
+
+// Disabled
+<Checkbox 
+  label="Disabled option" 
+  disabled
+  checked={false}
+/>
+```
+
+### Badge
+
+A small indicator component for highlighting status, tags, or counts.
+
+```tsx
+import { Badge } from './components/ui';
+
+// Basic usage
+<Badge>Default</Badge>
+
+// Variants
+<Badge variant="default">Default</Badge>
+<Badge variant="secondary">Secondary</Badge>
+<Badge variant="success">Success</Badge>
+<Badge variant="warning">Warning</Badge>
+<Badge variant="error">Error</Badge>
+<Badge variant="neutral">Neutral</Badge>
+
+// Outline style
+<Badge outline>Outline</Badge>
+<Badge variant="success" outline>Success Outline</Badge>
+```
+
+### Alert
+
+A notification component for displaying information, success, warning, or error messages.
+
+```tsx
+import { Alert } from './components/ui';
+
+// Basic usage
+<Alert>
+  This is a default alert
+</Alert>
+
+// Variants
+<Alert variant="info">Information alert</Alert>
+<Alert variant="success">Success alert</Alert>
+<Alert variant="warning">Warning alert</Alert>
+<Alert variant="error">Error alert</Alert>
+
+// With title
+<Alert variant="info" title="Information">
+  This is an information alert with a title
+</Alert>
+
+// Dismissible
+<Alert 
+  variant="success" 
+  title="Success"
+  onDismiss={() => setShowAlert(false)}
+>
+  This alert can be dismissed
+</Alert>
+
+// Custom icon
+<Alert 
+  variant="info"
+  icon={<CustomIcon />}
+>
+  This alert has a custom icon
+</Alert>
+```
+
+### IconButton
+
+A button component specifically designed for icon-only buttons.
+
+```tsx
+import { IconButton } from './components/ui';
+import { PlusIcon } from '@heroicons/react/20/solid';
+
+// Basic usage
+<IconButton 
+  icon={<PlusIcon className="h-5 w-5" />} 
+  label="Add item"
+/>
+
+// Variants
+<IconButton 
+  icon={<EditIcon className="h-5 w-5" />} 
+  variant="primary" 
+  label="Edit item"
+/>
+<IconButton 
+  icon={<TrashIcon className="h-5 w-5" />} 
+  variant="error" 
+  label="Delete item"
+/>
+<IconButton 
+  icon={<InfoIcon className="h-5 w-5" />} 
+  variant="outline" 
+  label="View information"
+/>
+```
+
+## Customization
+
+The components are built using Tailwind CSS, so they can be easily customized by modifying the Tailwind configuration file (`tailwind.config.js`). The components use CSS variables defined in the theme.css file, which can be updated to change the appearance of the components.
+
+For more complex customizations, you can modify the component source code directly. 

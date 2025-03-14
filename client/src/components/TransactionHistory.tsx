@@ -108,15 +108,33 @@ function TransactionHistory() {
     };
 
     if (isLoading) {
-        return <div className="loading">Loading transaction history...</div>;
+        return (
+            <div className="transaction-history-loading" role="status" aria-label="Loading transaction history">
+                <div className="loading-spinner"></div>
+                <span className="sr-only">Loading transaction history...</span>
+                <p className="loading-text">Loading your transaction history...</p>
+            </div>
+        );
     }
 
     if (isError) {
-        return <div className="alert error">Error loading transaction history</div>;
+        return (
+            <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                <div className="message" style={{ color: '#b91c1c' }}>
+                    <span role="img" aria-label="Error">❌</span> Error loading transaction history
+                </div>
+            </div>
+        );
     }
 
     if (!transactions || transactions.length === 0) {
-        return <div className="alert info">No transaction history found.</div>;
+        return (
+            <div className="verification-banner" style={{ backgroundColor: '#e0f2fe', borderColor: '#7dd3fc' }} role="alert">
+                <div className="message" style={{ color: '#0c4a6e' }}>
+                    <span role="img" aria-label="Information">ℹ️</span> No transaction history found.
+                </div>
+            </div>
+        );
     }
 
     // Filter transactions based on the selected filter
@@ -124,40 +142,61 @@ function TransactionHistory() {
         ? transactions 
         : transactions.filter(transaction => transaction.type === filter);
 
-    // Function to format status with color coding
+    // Function to determine status badge styling
     const formatStatus = (status: string) => {
         switch(status) {
             case 'pending':
-                return <span className="status warning">Pending</span>;
+                return (
+                    <span className="status-badge pending" role="status">
+                        <span role="img" aria-hidden="true">⏳</span> Pending
+                    </span>
+                );
             case 'approved':
-                return <span className="status success">Approved</span>;
+                return (
+                    <span className="status-badge success" role="status">
+                        <span role="img" aria-hidden="true">✅</span> Approved
+                    </span>
+                );
             case 'rejected':
-                return <span className="status error">Rejected</span>;
+                return (
+                    <span className="status-badge error" role="status">
+                        <span role="img" aria-hidden="true">❌</span> Rejected
+                    </span>
+                );
             default:
                 return <span>{status}</span>;
         }
     };
 
     return (
-        <div>
-            <div className="transaction-filter">
+        <div className="transaction-history-container">
+            <div className="transaction-header">
                 <h3>Transaction History</h3>
-                <div className="filter-buttons">
+                <div className="filter-buttons" role="tablist" aria-label="Filter transactions">
                     <button 
-                        className={`button text ${filter === 'all' ? 'active' : ''}`} 
+                        className={`filter-btn ${filter === 'all' ? 'active' : ''}`}
                         onClick={() => setFilter('all')}
+                        role="tab"
+                        aria-selected={filter === 'all'}
+                        aria-controls="all-transactions-tab"
                     >
                         All
                     </button>
                     <button 
-                        className={`button text ${filter === 'deposit' ? 'active' : ''}`} 
+                        className={`filter-btn ${filter === 'deposit' ? 'active' : ''}`}
                         onClick={() => setFilter('deposit')}
+                        role="tab"
+                        aria-selected={filter === 'deposit'}
+                        aria-controls="deposit-transactions-tab"
                     >
                         Deposits
                     </button>
                     <button 
-                        className={`button text ${filter === 'withdrawal' ? 'active' : ''}`} 
+                        className={`filter-btn ${filter === 'withdrawal' ? 'active' : ''}`}
                         onClick={() => setFilter('withdrawal')}
+                        role="tab"
+                        aria-selected={filter === 'withdrawal'}
+                        aria-controls="withdrawal-transactions-tab"
                     >
                         Withdrawals
                     </button>
@@ -165,42 +204,60 @@ function TransactionHistory() {
             </div>
 
             {filteredTransactions.length === 0 ? (
-                <div className="alert info">No {filter} transactions found.</div>
+                <div className="verification-banner" style={{ backgroundColor: '#e0f2fe', borderColor: '#7dd3fc' }} role="alert">
+                    <div className="message" style={{ color: '#0c4a6e' }}>
+                        <span role="img" aria-label="Information">ℹ️</span> No {filter} transactions found.
+                    </div>
+                </div>
             ) : (
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Currency</th>
-                            <th>Amount</th>
-                            <th>Status</th>
-                            <th>Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {filteredTransactions.map((transaction) => (
-                            <tr key={transaction.id}>
-                                <td>{formatDate(transaction.createdAt)}</td>
-                                <td>
-                                    {transaction.type === 'deposit' ? (
-                                        <span className="status success pill">Deposit</span>
-                                    ) : (
-                                        <span className="status info pill">Withdrawal</span>
-                                    )}
-                                </td>
-                                <td>{transaction.currency}</td>
-                                <td>{transaction.amount}</td>
-                                <td>{formatStatus(transaction.status)}</td>
-                                <td>
-                                    {transaction.status === 'rejected'
-                                        ? transaction.rejectionReason
-                                        : '-'}
-                                </td>
+                <div className="transaction-table-container" role="region" aria-label="Transaction history" id={`${filter}-transactions-tab`}>
+                    <table className="transaction-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Date</th>
+                                <th scope="col">Type</th>
+                                <th scope="col">Currency</th>
+                                <th scope="col">Amount</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Notes</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {filteredTransactions.map((transaction) => (
+                                <tr key={transaction.id} className={`transaction-row ${transaction.status}`}>
+                                    <td>{formatDate(transaction.createdAt)}</td>
+                                    <td>
+                                        {transaction.type === 'deposit' ? (
+                                            <span className="transaction-type deposit" aria-label="Deposit transaction">
+                                                <span role="img" aria-hidden="true">↓</span> Deposit
+                                            </span>
+                                        ) : (
+                                            <span className="transaction-type withdrawal" aria-label="Withdrawal transaction">
+                                                <span role="img" aria-hidden="true">↑</span> Withdrawal
+                                            </span>
+                                        )}
+                                    </td>
+                                    <td>{transaction.currency}</td>
+                                    <td className="amount">
+                                        <span className={transaction.type === 'deposit' ? 'amount-positive' : 'amount-negative'}>
+                                            {transaction.type === 'deposit' ? '+' : '-'}{transaction.amount}
+                                        </span>
+                                    </td>
+                                    <td>{formatStatus(transaction.status)}</td>
+                                    <td>
+                                        {transaction.status === 'rejected' && transaction.rejectionReason ? (
+                                            <span className="rejection-reason" title={transaction.rejectionReason}>
+                                                {transaction.rejectionReason}
+                                            </span>
+                                        ) : (
+                                            <span className="no-notes">-</span>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             )}
         </div>
     );

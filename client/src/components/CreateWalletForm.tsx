@@ -68,50 +68,68 @@ function CreateWalletForm() {
     };
 
     return (
-        <div className="wallet-form-container">
+        <div>
+            <h3>Create New Wallet</h3>
+            
+            {/* Success Message */}
             {success && (
-                <div className="success-message bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4">
-                    <span>{success}</span>
+                <div className="verification-banner" style={{ backgroundColor: '#e6f7ef', borderColor: '#84e1bc' }} role="alert">
+                    <div className="message" style={{ color: '#0d7d4d' }}>
+                        <span role="img" aria-label="Success">✅</span> {success}
+                    </div>
                 </div>
             )}
             
-            {formError && (
-                <ErrorDisplay 
-                    error={formError} 
-                    variant="alert"
-                    className="mb-4"
-                    onDismiss={() => setFormError(null)} 
-                />
+            {/* General Form Error */}
+            {formError && !formError.errors && (
+                <div className="verification-banner" style={{ backgroundColor: '#fee2e2', borderColor: '#fca5a5' }} role="alert">
+                    <div className="message" style={{ color: '#b91c1c' }}>
+                        <span role="img" aria-label="Error">❌</span> {formError.message}
+                    </div>
+                </div>
             )}
             
-            <form onSubmit={handleSubmit} className="wallet-form">
+            {/* Wallet Creation Form */}
+            <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label htmlFor="currency" className="form-label">Currency</label>
+                    <label htmlFor="currency">Currency:</label>
                     <select
                         id="currency"
                         value={currency}
                         onChange={(e) => setCurrency(e.target.value)}
-                        className="form-select"
-                        aria-label="Select currency"
+                        className={formError?.errors?.currency ? "error" : ""}
+                        aria-invalid={formError?.errors?.currency ? "true" : "false"}
+                        aria-describedby={formError?.errors?.currency ? "currency-error" : undefined}
+                        required
                     >
                         <option value="">Select a currency</option>
                         <option value="USDT">USDT (Tether)</option>
                         <option value="JOD">JOD (Jordanian Dinar)</option>
                     </select>
-                    {formError && formError.errors?.currency && (
-                        <ErrorDisplay 
-                            error={formError.errors.currency.join('. ')} 
-                            variant="inline" 
-                        />
+                    
+                    {formError?.errors?.currency && (
+                        <div id="currency-error" className="form-error" role="alert">
+                            {formError.errors.currency.join('. ')}
+                        </div>
                     )}
+                </div>
+                
+                <div className="form-info" style={{ marginBottom: '16px' }}>
+                    <p><span role="img" aria-label="Info">ℹ️</span> Creating a wallet allows you to deposit, withdraw, and manage funds in the selected currency.</p>
                 </div>
                 
                 <button
                     type="submit"
-                    className="button primary"
+                    className="button"
                     disabled={createWalletMutation.isPending}
+                    aria-busy={createWalletMutation.isPending}
                 >
-                    {createWalletMutation.isPending ? 'Creating Wallet...' : 'Create Wallet'}
+                    {createWalletMutation.isPending ? (
+                        <>
+                            <span className="loading-spinner-small" aria-hidden="true"></span>
+                            <span>Creating Wallet...</span>
+                        </>
+                    ) : 'Create Wallet'}
                 </button>
             </form>
         </div>

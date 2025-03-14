@@ -1,0 +1,120 @@
+/**
+ * Accessibility CSS
+ * Styles to enhance accessibility compliance (WCAG 2.1 AA)
+ */
+
+/* Screen reader only - visually hidden but available to screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Skip to content link - hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: rgb(var(--color-primary-600));
+  color: white;
+  padding: 8px;
+  z-index: 100;
+  transition: top 0.2s ease;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Enhanced focus styles */
+.focus-visible,
+:focus-visible {
+  outline: 2px solid rgb(var(--color-primary-600));
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+[tabindex]:focus:not(.focus-visible),
+button:focus:not(.focus-visible),
+a:focus:not(.focus-visible),
+input:focus:not(.focus-visible),
+select:focus:not(.focus-visible),
+textarea:focus:not(.focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(var(--color-primary-100)), 0 0 0 4px rgb(var(--color-primary-500));
+}
+
+/* High contrast mode adjustments */
+@media (forced-colors: active) {
+  /* Ensure buttons have borders in high contrast mode */
+  .button, 
+  button,
+  [role="button"] {
+    border: 1px solid ButtonText;
+  }
+  
+  /* Force links to be underlined */
+  a {
+    text-decoration: underline;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  /* Keep essential animations but make them quicker */
+  .loading-spinner {
+    animation-duration: 0.5s !important;
+  }
+}
+
+/* Keyboard focus indicator for interactive elements */
+button:focus-visible,
+[role="button"]:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid rgb(var(--color-primary-600));
+  outline-offset: 2px;
+}
+
+/* Contrast enhancement for error states */
+.text-error-500 {
+  color: rgb(var(--color-error-700)); /* Darkened for better contrast */
+}
+
+/* Improved focus styles for form controls */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgb(var(--color-primary-600));
+  box-shadow: 0 0 0 1px rgb(var(--color-primary-600));
+}
+
+/* Accessible tooltip styles */
+[role="tooltip"] {
+  position: absolute;
+  z-index: 1000;
+  padding: 8px;
+  background-color: rgb(var(--color-neutral-900));
+  color: white;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  max-width: 250px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+} 

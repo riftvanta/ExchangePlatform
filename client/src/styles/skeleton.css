@@ -1,0 +1,122 @@
+/**
+ * Skeleton loading styles
+ * These styles create placeholder loading animations for content that's being loaded
+ */
+
+/* Base skeleton container */
+.skeleton-loader {
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  background-color: rgb(var(--color-neutral-50));
+  width: 100%;
+  animation: pulse 1.5s ease-in-out 0.5s infinite;
+}
+
+/* Skeleton animation */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Skeleton elements */
+.skeleton-header {
+  height: 24px;
+  width: 50%;
+  background-color: rgb(var(--color-neutral-200));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-4);
+}
+
+.skeleton-line {
+  height: 16px;
+  width: 100%;
+  background-color: rgb(var(--color-neutral-200));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-2);
+}
+
+.skeleton-line:last-child {
+  width: 80%;
+}
+
+.skeleton-input {
+  height: 40px;
+  width: 100%;
+  background-color: rgb(var(--color-neutral-200));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-3);
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 30%;
+  background-color: rgb(var(--color-neutral-200));
+  border-radius: var(--radius-md);
+  margin-top: var(--spacing-2);
+}
+
+.skeleton-table {
+  width: 100%;
+}
+
+.skeleton-row {
+  height: 40px;
+  width: 100%;
+  background-color: rgb(var(--color-neutral-200));
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-2);
+}
+
+/* Different sizes */
+.skeleton-sm {
+  height: 16px;
+}
+
+.skeleton-md {
+  height: 24px;
+}
+
+.skeleton-lg {
+  height: 32px;
+}
+
+/* Circle skeleton for avatars */
+.skeleton-circle {
+  border-radius: 50%;
+  height: 48px;
+  width: 48px;
+  background-color: rgb(var(--color-neutral-200));
+}
+
+/* Page loading indicator */
+.page-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  width: 100%;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(var(--color-primary-200), 0.5);
+  border-radius: 50%;
+  border-top-color: rgb(var(--color-primary-600));
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--spacing-4);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+} 
