@@ -65,8 +65,8 @@ else
   exit 1
 fi
 
-# Run the API tests
-print_header "RUNNING API ENDPOINT TESTS"
+# Run the Backend API tests
+print_header "RUNNING BACKEND API TESTS"
 
 echo "Running Authentication API Tests..."
 npx jest server/tests/auth-api.test.ts --config=jest.config.js --runInBand --forceExit
@@ -83,15 +83,25 @@ npx jest server/tests/transaction-api.test.ts --config=jest.config.js --runInBan
 check_result "Transaction API Tests"
 TRANSACTION_RESULT=$?
 
+# Run the Frontend Component tests
+print_header "RUNNING FRONTEND COMPONENT TESTS"
+
+echo "Running Frontend Component Tests..."
+cd client && npx vitest run
+check_result "Frontend Component Tests"
+FRONTEND_RESULT=$?
+cd ..
+
 # Stop the server
 echo "Stopping test server..."
 kill -9 $SERVER_PID 2>/dev/null
 
 # Print summary
 print_header "TEST SUMMARY"
-if [ $HEALTH_RESULT -eq 0 ] && [ $AUTH_RESULT -eq 0 ] && [ $WALLET_RESULT -eq 0 ] && [ $TRANSACTION_RESULT -eq 0 ]; then
-  echo -e "${GREEN}All API tests passed successfully!${NC}"
-  echo -e "${GREEN}The application endpoints are working correctly.${NC}"
+if [ $HEALTH_RESULT -eq 0 ] && [ $AUTH_RESULT -eq 0 ] && [ $WALLET_RESULT -eq 0 ] && [ $TRANSACTION_RESULT -eq 0 ] && [ $FRONTEND_RESULT -eq 0 ]; then
+  echo -e "${GREEN}All tests passed successfully!${NC}"
+  echo -e "${GREEN}✓ Backend API tests: PASSED${NC}"
+  echo -e "${GREEN}✓ Frontend Component tests: PASSED${NC}"
   exit 0
 else
   echo -e "${RED}Some tests failed. Please check the output above for details.${NC}"
@@ -99,5 +109,6 @@ else
   [ $AUTH_RESULT -ne 0 ] && echo -e "${RED}✗ Authentication tests failed${NC}"
   [ $WALLET_RESULT -ne 0 ] && echo -e "${RED}✗ Wallet tests failed${NC}"
   [ $TRANSACTION_RESULT -ne 0 ] && echo -e "${RED}✗ Transaction tests failed${NC}"
+  [ $FRONTEND_RESULT -ne 0 ] && echo -e "${RED}✗ Frontend Component tests failed${NC}"
   exit 1
 fi 
