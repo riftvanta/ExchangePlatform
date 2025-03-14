@@ -59,91 +59,9 @@ function AdminOnly({ children }: { children: ReactNode }) {
     return <>{children}</>;
 }
 
-// Simple Dashboard component
+// Simple Dashboard component - kept for reference but now redirects to Joy UI version
 const Dashboard = () => {
-    const { logout } = useAuth();
-    const { user } = useAuth();
-
-    return (
-        <div className="dashboard">
-            <h2>Dashboard</h2>
-            
-            {user && !user.emailVerified && (
-                <div className="verification-banner">
-                    <div className="message">
-                        <span role="img" aria-label="Warning">⚠️</span> Email not verified - Some features may be limited.
-                    </div>
-                    <Link 
-                        to="/resend-verification" 
-                        className="button text"
-                    >
-                        Verify your email
-                    </Link>
-                </div>
-            )}
-            
-            <div className="nav-links">
-                <Link to="/profile" className="nav-link">
-                    View Profile
-                </Link>
-                {/* Joy UI Example link */}
-                <Link to="/joy-ui-examples" className="nav-link">
-                    Joy UI Examples
-                </Link>
-                {/* Joy UI Dashboard link */}
-                <Link to="/dashboard-joy" className="nav-link">
-                    Joy UI Dashboard
-                </Link>
-                {/* Admin links - only visible to admins */}
-                {user?.isAdmin && (
-                    <>
-                        <Link to="/admin/deposits" className="nav-link">
-                            Manage Deposits
-                        </Link>
-                        <Link to="/admin/withdrawals" className="nav-link">
-                            Manage Withdrawals
-                        </Link>
-                    </>
-                )}
-            </div>
-            
-            <div className="dashboard-section">
-                <h2>Wallet Balances</h2>
-                <WalletBalances />
-            </div>
-            
-            <div className="dashboard-section">
-                <h2>Create New Wallet</h2>
-                <CreateWalletForm />
-            </div>
-            
-            <div className="transaction-section">
-                <div className="dashboard-section">
-                    <h2>Deposit USDT</h2>
-                    <DepositUsdtForm />
-                </div>
-                <div className="dashboard-section">
-                    <h2>Withdraw USDT</h2>
-                    <WithdrawUsdtForm />
-                </div>
-            </div>
-            
-            <div className="dashboard-section">
-                <h2>Transaction Records</h2>
-                <div className="single-section">
-                    <TransactionHistory />
-                </div>
-            </div>
-            
-            <button 
-                onClick={logout}
-                className="button"
-                style={{ marginTop: 'var(--spacing-lg)' }}
-            >
-                Logout
-            </button>
-        </div>
-    );
+    return <Navigate to="/" replace />;
 };
 
 function App() {
@@ -193,12 +111,12 @@ function App() {
                             }
                         />
 
-                        {/* Joy UI Dashboard */}
+                        {/* Legacy Dashboard route - redirects to Joy UI Dashboard */}
                         <Route
-                            path="/dashboard-joy"
+                            path="/dashboard-legacy"
                             element={
                                 <ProtectedRoute>
-                                    <DashboardJoy />
+                                    <Dashboard />
                                 </ProtectedRoute>
                             }
                         />
@@ -208,7 +126,7 @@ function App() {
                             path="/"
                             element={
                                 <ProtectedRoute>
-                                    <Dashboard />
+                                    <DashboardJoy />
                                 </ProtectedRoute>
                             }
                         />

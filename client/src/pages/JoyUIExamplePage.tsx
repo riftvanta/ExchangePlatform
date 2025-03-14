@@ -152,14 +152,14 @@ function JoyUIExamplePage() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography level="h1">Joy UI Components</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Link to="/dashboard-joy">
-            <Button color="primary" variant="outlined">View Joy UI Dashboard</Button>
+          <Link to="/">
+            <Button color="primary" variant="outlined">Back to Dashboard</Button>
           </Link>
           <Link to="/specialized-components">
             <Button color="primary" variant="outlined">View Specialized Components</Button>
           </Link>
-          <Link to="/">
-            <Button color="neutral" variant="outlined">Back to Dashboard</Button>
+          <Link to="/dashboard-legacy">
+            <Button color="neutral" variant="outlined">View Legacy Dashboard</Button>
           </Link>
         </Box>
       </Box>

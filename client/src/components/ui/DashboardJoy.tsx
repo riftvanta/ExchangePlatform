@@ -61,7 +61,7 @@ function DashboardJoy() {
           </Link>
           
           <Link to="/joy-ui-examples" style={{ textDecoration: 'none' }}>
-            <Button variant="plain" color="neutral">Joy UI Examples</Button>
+            <Button variant="plain" color="neutral">Component Library</Button>
           </Link>
           
           {user?.isAdmin && (

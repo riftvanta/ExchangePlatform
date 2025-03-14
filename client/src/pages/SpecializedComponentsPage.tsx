@@ -46,11 +46,11 @@ function SpecializedComponentsPage() {
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Typography level="h1">Specialized Components</Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Link to="/dashboard-joy">
-            <Button color="primary" variant="outlined">View Joy UI Dashboard</Button>
+          <Link to="/">
+            <Button color="primary" variant="outlined">Back to Dashboard</Button>
           </Link>
           <Link to="/joy-ui-examples">
-            <Button color="neutral" variant="outlined">Back to Joy UI Examples</Button>
+            <Button color="neutral" variant="outlined">View Component Examples</Button>
           </Link>
         </Box>
       </Box>
