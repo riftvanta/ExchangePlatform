@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CreateWalletFormJoy from '../components/ui/CreateWalletFormJoy';
+import WithdrawUsdtFormJoy from '../components/ui/WithdrawUsdtFormJoy';
 
 // Import our Joy UI components
 import { 
@@ -12,15 +13,56 @@ import {
   Grid, 
   Chip,
   FormControl,
-  Input
+  Input,
+  Modal,
+  Tabs,
+  Table,
+  TableColumn,
+  Box,
+  Sheet,
+  Divider
 } from '../components/ui';
-import Box from '@mui/joy/Box';
-import Sheet from '@mui/joy/Sheet';
+
+// Define user type for table
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
+// Sample data for table
+const sampleUsers: User[] = [
+  { id: 1, name: 'John Doe', email: 'john@example.com', role: 'User', status: 'Active' },
+  { id: 2, name: 'Jane Smith', email: 'jane@example.com', role: 'Admin', status: 'Active' },
+  { id: 3, name: 'Bob Johnson', email: 'bob@example.com', role: 'User', status: 'Inactive' },
+];
+
+// Table columns
+const userColumns: TableColumn<User>[] = [
+  { header: 'ID', accessor: 'id', width: '10%' },
+  { header: 'Name', accessor: 'name', width: '30%' },
+  { header: 'Email', accessor: 'email', width: '30%' },
+  { header: 'Role', accessor: 'role', width: '15%' },
+  { 
+    header: 'Status', 
+    accessor: (row: User) => (
+      <Chip color={row.status === 'Active' ? 'success' : 'neutral'}>
+        {row.status}
+      </Chip>
+    ),
+    width: '15%',
+    align: 'center'
+  },
+];
 
 function JoyUIExamplePage() {
   const [showAlert, setShowAlert] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [inputError, setInputError] = useState<string | undefined>(undefined);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalVariant, setModalVariant] = useState<'basic' | 'form' | 'confirmation'>('basic');
 
   const handleButtonClick = () => {
     setShowAlert(true);
@@ -35,6 +77,40 @@ function JoyUIExamplePage() {
       setInputError(undefined);
     }
   };
+
+  const openModal = (variant: 'basic' | 'form' | 'confirmation') => {
+    setModalVariant(variant);
+    setModalOpen(true);
+  };
+
+  // Content for tabs
+  const tabItems = [
+    {
+      label: 'Create Wallet',
+      value: 'create-wallet',
+      content: <CreateWalletFormJoy />
+    },
+    {
+      label: 'Withdraw',
+      value: 'withdraw',
+      content: <WithdrawUsdtFormJoy />
+    },
+    {
+      label: 'Users',
+      value: 'users',
+      content: (
+        <Box sx={{ p: 2 }}>
+          <Typography level="h3" sx={{ mb: 2 }}>User Management</Typography>
+          <Table
+            columns={userColumns}
+            data={sampleUsers}
+            borderAxis="both"
+            stickyHeader
+          />
+        </Box>
+      )
+    }
+  ];
 
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
@@ -160,6 +236,43 @@ function JoyUIExamplePage() {
         </Grid>
       </Grid>
 
+      {/* Modal Examples */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography level="h2" sx={{ mb: 2 }}>Modal Examples</Typography>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Button onClick={() => openModal('basic')}>Open Basic Modal</Button>
+            <Button onClick={() => openModal('form')}>Open Form Modal</Button>
+            <Button color="danger" onClick={() => openModal('confirmation')}>
+              Open Confirmation Modal
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Table Example */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography level="h2" sx={{ mb: 2 }}>Table Example</Typography>
+          <Table
+            columns={userColumns}
+            data={sampleUsers}
+            caption="User Management"
+            borderAxis="both"
+            stripe="odd"
+            hoverRow
+          />
+        </CardContent>
+      </Card>
+
+      {/* Tabs Example */}
+      <Card sx={{ mb: 4 }}>
+        <CardContent>
+          <Typography level="h2" sx={{ mb: 2 }}>Tabs Example</Typography>
+          <Tabs tabs={tabItems} />
+        </CardContent>
+      </Card>
+
       <Sheet 
         variant="outlined" 
         sx={{ 
@@ -169,9 +282,67 @@ function JoyUIExamplePage() {
           boxShadow: 'sm'
         }}
       >
-        <Typography level="h2" sx={{ mb: 2 }}>Create Wallet Form (Joy UI Version)</Typography>
+        <Typography level="h2" sx={{ mb: 2 }}>Migrated Form Examples</Typography>
+        <Divider sx={{ my: 2 }} />
+        <Typography level="h3" sx={{ mb: 2 }}>Create Wallet Form (Joy UI Version)</Typography>
         <CreateWalletFormJoy />
+        <Divider sx={{ my: 3 }} />
+        <Typography level="h3" sx={{ mb: 2 }}>Withdraw USDT Form (Joy UI Version)</Typography>
+        <WithdrawUsdtFormJoy />
       </Sheet>
+
+      {/* Modals */}
+      <Modal
+        open={modalOpen && modalVariant === 'basic'}
+        onClose={() => setModalOpen(false)}
+        title="Basic Modal"
+      >
+        <Typography>
+          This is a basic modal dialog. You can use it to display information to the user.
+          It can be closed by clicking the X button or clicking outside the modal.
+        </Typography>
+      </Modal>
+
+      <Modal
+        open={modalOpen && modalVariant === 'form'}
+        onClose={() => setModalOpen(false)}
+        title="Form Modal"
+        footer={
+          <>
+            <Button variant="plain" color="neutral" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setModalOpen(false)}>Submit</Button>
+          </>
+        }
+      >
+        <FormControl label="Name">
+          <Input placeholder="Enter your name" />
+        </FormControl>
+        <FormControl label="Email">
+          <Input placeholder="Enter your email" />
+        </FormControl>
+      </Modal>
+
+      <Modal
+        open={modalOpen && modalVariant === 'confirmation'}
+        onClose={() => setModalOpen(false)}
+        title="Confirm Action"
+        footer={
+          <>
+            <Button variant="plain" color="neutral" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button color="danger" onClick={() => setModalOpen(false)}>
+              Confirm Deletion
+            </Button>
+          </>
+        }
+      >
+        <Typography>
+          Are you sure you want to delete this item? This action cannot be undone.
+        </Typography>
+      </Modal>
     </Box>
   );
 }

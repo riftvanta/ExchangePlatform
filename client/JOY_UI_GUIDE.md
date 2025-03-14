@@ -49,6 +49,26 @@ We've created a set of reusable components that wrap Joy UI components while mai
   - Error state support
   - Size variants
 
+### Specialized Components
+
+- **Modal**: `client/src/components/ui/Modal.tsx`
+  - Customizable modal dialog with header, body, and footer sections
+  - Supports optional title and footer
+  - Size variants: sm, md, lg
+  - Customizable color and variant
+
+- **Tabs**: `client/src/components/ui/Tabs.tsx`
+  - Tab interface with content panels
+  - Controlled and uncontrolled states
+  - Supports orientation, color, variant, and size options
+  - Disabled tab support
+
+- **Table**: `client/src/components/ui/Table.tsx`
+  - Data table with customizable columns
+  - TypeScript support with generics for type-safe column definitions
+  - Features: sticky header, hover effects, striped rows, loading state
+  - Custom cell renderers with full TypeScript support
+
 ### Direct Re-exports
 
 We also re-export several Joy UI components that don't require customization:
@@ -58,6 +78,10 @@ We also re-export several Joy UI components that don't require customization:
 - Grid
 - CircularProgress
 - Checkbox
+- Box
+- Sheet
+- Divider
+- AspectRatio
 
 ## Usage
 
@@ -96,6 +120,77 @@ import Button from '@mui/joy/Button';
 >
   Submit
 </Button>
+```
+
+### Modal Example
+
+```tsx
+const [open, setOpen] = useState(false);
+
+return (
+  <>
+    <Button onClick={() => setOpen(true)}>Open Modal</Button>
+    
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      title="Modal Title"
+      footer={
+        <>
+          <Button variant="plain" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirm}>Confirm</Button>
+        </>
+      }
+    >
+      <Typography>This is the modal content.</Typography>
+    </Modal>
+  </>
+);
+```
+
+### Tabs Example
+
+```tsx
+const tabItems = [
+  {
+    label: 'Tab 1',
+    value: 'tab1',
+    content: <div>Content for Tab 1</div>
+  },
+  {
+    label: 'Tab 2',
+    value: 'tab2',
+    content: <div>Content for Tab 2</div>
+  }
+];
+
+return <Tabs tabs={tabItems} defaultValue="tab1" />;
+```
+
+### Table Example
+
+```tsx
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+const columns: TableColumn<User>[] = [
+  { header: 'ID', accessor: 'id' },
+  { header: 'Name', accessor: 'name' },
+  { header: 'Email', accessor: 'email' },
+  { 
+    header: 'Actions', 
+    accessor: (user) => (
+      <Button size="sm" onClick={() => handleEdit(user.id)}>Edit</Button>
+    )
+  }
+];
+
+const users: User[] = [...];
+
+return <Table columns={columns} data={users} />;
 ```
 
 ## Example Page
