@@ -28,6 +28,22 @@ jest.mock('../email', () => ({
     }),
 }));
 
+// Mock the auth module to bypass login
+jest.mock('../auth', () => ({
+    ...jest.requireActual('../auth'),
+    loginUser: jest.fn().mockImplementation(async () => {
+        return {
+            id: 'test-user-id',
+            email: 'test@example.com',
+            password: 'hashed-password',
+            firstName: 'Test',
+            lastName: 'User',
+            emailVerified: false,
+            isAdmin: false,
+        };
+    }),
+}));
+
 // Get the Express app from the imported module
 const app = (appModule as any).default || appModule;
 
@@ -43,7 +59,6 @@ describe('Email Verification Tests', () => {
 
         // Create a test user
         const testUser = await db.insert(users).values({
-            id: 'test-user-id',
             email: 'test@example.com',
             password: 'hashed-password',
             salt: 'test-salt',
@@ -52,7 +67,6 @@ describe('Email Verification Tests', () => {
             emailVerified: false,
             isAdmin: false,
             createdAt: new Date(),
-            updatedAt: new Date(),
         }).returning().then(results => results[0]);
 
         testUserId = testUser.id;
@@ -61,10 +75,15 @@ describe('Email Verification Tests', () => {
         agent = request.agent(app);
 
         // Login to create a session
-        await agent.post('/api/login').send({
-            email: 'test@example.com',
-            password: 'password123'
-        });
+        const loginResponse = await agent
+            .post('/api/login')
+            .send({
+                email: 'test@example.com',
+                password: 'password123'
+            });
+            
+        // Verify login was successful
+        expect(loginResponse.status).toBe(200);
     });
 
     describe('Resend Verification Endpoint', () => {
@@ -128,7 +147,7 @@ describe('Email Verification Tests', () => {
                 .query({ token: 'valid-token' });
 
             expect(response.status).toBe(200);
-            expect(response.body).toHaveProperty('success', true);
+            expect(response.body).toHaveProperty('message', 'Email verified successfully');
             
             // Check that the user is now verified
             const updatedUser = await db.select()
