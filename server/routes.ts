@@ -966,4 +966,11 @@ router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
     }
 }) as RequestHandler);
 
+/**
+ * Health check endpoint for testing connectivity
+ */
+router.get('/health', (async (req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok', message: 'Server is running', timestamp: new Date().toISOString() });
+}) as RequestHandler);
+
 export default router;

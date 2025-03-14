@@ -5,6 +5,8 @@
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "test:backend": "jest server/tests --config=jest.config.js --runInBand --forceExit",
+        "test:e2e": "cypress open",
+        "test:e2e:headless": "cypress run",
         "db:generate": "drizzle-kit generate --config=drizzle.config.ts",
         "db:push": "drizzle-kit push --config=drizzle.config.ts",
         "generate-types": "ts-node scripts/generate-types.ts",
@@ -48,7 +50,8 @@
         "ts-node-dev": "^2.0.0",
         "typescript": "^5.8.2",
         "typescript-eslint": "^8.26.1",
-        "vite": "^6.2.1"
+        "vite": "^6.2.1",
+        "cypress": "^12.7.0"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.758.0",
