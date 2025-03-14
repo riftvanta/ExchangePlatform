@@ -13,9 +13,22 @@ import { NewWallet, transactions, NewTransaction } from '../shared/schema';
 import Decimal from 'decimal.js';
 import db from './db';
 import { wallets } from '../shared/schema';
-import { eq, and, lt } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { isAdmin } from './middleware/isAdmin';
 import { generateReadUrl } from './s3';
+import { 
+    verifyEmail, 
+    createPasswordResetToken, 
+    verifyPasswordResetToken 
+} from './email';
+import { 
+    sendVerificationConfirmationEmail, 
+    sendPasswordResetEmail,
+    sendPasswordResetConfirmationEmail,
+    sendTransactionNotificationEmail,
+} from '../shared/email';
+import { scryptSync, randomBytes } from 'crypto';
+import { users } from '../shared/schema';
 
 const router = Router();
 
@@ -261,12 +274,118 @@ router.post('/deposit/usdt', isAuthenticated, (async (
 
         // DO NOT UPDATE WALLET BALANCE HERE - Admin will approve first
 
+        // Get user's email for notification
+        const user = await getUserById(userId);
+        
+        if (user) {
+            // Send email notification for pending deposit
+            await sendTransactionNotificationEmail(
+                user.email,
+                'deposit',
+                'pending',
+                amount,
+                'USDT'
+            );
+        }
+
         res.status(201).json({
             message: 'Deposit request submitted for approval',
             transaction: insertedTransaction[0],
         });
     } catch (error) {
         console.error('Deposit error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
+ * USDT Withdrawal endpoint
+ * Handles withdrawals of USDT from user wallet (requires admin approval)
+ */
+router.post('/withdraw/usdt', isAuthenticated, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const userId = req.session.userId as string;
+        const { amount, walletAddress } = req.body;
+
+        // Validate input
+        if (
+            !amount ||
+            typeof amount !== 'string' ||
+            !/^\d+(\.\d+)?$/.test(amount)
+        ) {
+            return res.status(400).json({ error: 'Invalid amount' });
+        }
+        if (!walletAddress) {
+            return res
+                .status(400)
+                .json({ error: 'Wallet address is required' });
+        }
+
+        // Get USDT wallet
+        const userWallets = await getWalletsByUserId(userId);
+        const usdtWallet = userWallets.find(
+            (wallet) => wallet.currency === 'USDT'
+        );
+
+        if (!usdtWallet) {
+            return res.status(400).json({ error: 'USDT wallet not found' });
+        }
+
+        // Check if user has enough balance
+        const currentBalance = new Decimal(usdtWallet.balance);
+        const withdrawalAmount = new Decimal(amount);
+
+        if (withdrawalAmount.greaterThan(currentBalance)) {
+            return res.status(400).json({ error: 'Insufficient balance' });
+        }
+
+        // Deduct the amount from the wallet balance
+        const newBalance = currentBalance.minus(withdrawalAmount).toString();
+        
+        await db
+            .update(wallets)
+            .set({ balance: newBalance, updatedAt: new Date() })
+            .where(eq(wallets.id, usdtWallet.id));
+
+        // Create a new transaction record
+        const newTransaction: NewTransaction = {
+            userId: userId,
+            walletId: usdtWallet.id,
+            type: 'withdrawal',
+            currency: 'USDT',
+            amount: amount,
+            transactionHash: walletAddress, // Store wallet address in transactionHash field
+            status: 'pending', // Initial status is 'pending'
+        };
+
+        const insertedTransaction = await db
+            .insert(transactions)
+            .values(newTransaction)
+            .returning();
+
+        // Get user's email for notification
+        const user = await getUserById(userId);
+        
+        if (user) {
+            // Send email notification for pending withdrawal
+            await sendTransactionNotificationEmail(
+                user.email,
+                'withdrawal',
+                'pending',
+                amount,
+                'USDT'
+            );
+        }
+
+        res.status(201).json({
+            message: 'Withdrawal request submitted for approval',
+            transaction: insertedTransaction[0],
+        });
+    } catch (error) {
+        console.error('Withdrawal error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }) as RequestHandler);
@@ -282,7 +401,12 @@ router.get('/admin/deposits', isAuthenticated, isAdmin, (async (
         const pendingDeposits = await db
             .select()
             .from(transactions)
-            .where(eq(transactions.status, 'pending'));
+            .where(
+                and(
+                    eq(transactions.status, 'pending'),
+                    eq(transactions.type, 'deposit')
+                )
+            );
         res.status(200).json({ deposits: pendingDeposits });
     } catch (error) {
         console.error('Get pending deposits error:', error);
@@ -345,6 +469,20 @@ router.post(
                 .set({ status: 'approved', updatedAt: new Date() })
                 .where(eq(transactions.id, transactionId));
 
+            // Get user's email for notification
+            const user = await getUserById(transaction.userId);
+            
+            if (user) {
+                // Send email notification
+                await sendTransactionNotificationEmail(
+                    user.email,
+                    'deposit',
+                    'approved',
+                    transaction.amount,
+                    transaction.currency
+                );
+            }
+
             res.status(200).json({ message: 'Deposit approved' });
         } catch (error) {
             console.error('Approve deposit error:', error);
@@ -363,12 +501,7 @@ router.post(
     (async (req: Request, res: Response) => {
         try {
             const { transactionId } = req.params;
-            const { rejectionReason } = req.body;
-
-            // Validate input
-            if (!rejectionReason) {
-                return res.status(400).json({ error: 'Rejection reason is required' });
-            }
+            const { rejectionReason } = req.body; // Get rejectionReason from body
 
             // Find the transaction
             const transaction = await db
@@ -388,15 +521,37 @@ router.post(
                     .json({ error: 'Transaction is not pending' });
             }
 
-            // Update transaction status
+            // Validate rejectionReason if status is rejected
+            if (!rejectionReason) {
+                return res
+                    .status(400)
+                    .json({ error: 'Rejection reason is required' });
+            }
+
+            // Update transaction status with rejection reason
             await db
                 .update(transactions)
-                .set({ 
-                    status: 'rejected', 
+                .set({
+                    status: 'rejected',
+                    rejectionReason,
                     updatedAt: new Date(),
-                    rejectionReason: rejectionReason || 'No reason provided'
                 })
                 .where(eq(transactions.id, transactionId));
+
+            // Get user's email for notification
+            const user = await getUserById(transaction.userId);
+            
+            if (user) {
+                // Send email notification
+                await sendTransactionNotificationEmail(
+                    user.email,
+                    'deposit',
+                    'rejected',
+                    transaction.amount,
+                    transaction.currency,
+                    rejectionReason
+                );
+            }
 
             res.status(200).json({ message: 'Deposit rejected' });
         } catch (error) {
@@ -468,175 +623,174 @@ router.get(
 );
 
 /**
- * USDT Withdrawal endpoint
- * Handles withdrawals of USDT from user wallet (requires admin approval)
+ * Email verification endpoint
+ * Verifies a user's email with the provided token
  */
-router.post('/withdraw/usdt', isAuthenticated, (async (
-    req: Request,
-    res: Response
-) => {
+router.get('/verify-email', (async (req: Request, res: Response) => {
     try {
-        const userId = req.session.userId as string;
-        const { amount, walletAddress } = req.body;
+        const token = req.query.token as string;
 
-        // Validate input
-        if (
-            !amount ||
-            typeof amount !== 'string' ||
-            !/^\d+(\.\d+)?$/.test(amount)
-        ) {
-            return res.status(400).json({ error: 'Invalid amount' });
-        }
-        if (!walletAddress) {
-            return res
-                .status(400)
-                .json({ error: 'Wallet address is required' });
+        if (!token) {
+            return res.status(400).json({ error: 'Verification token is required' });
         }
 
-        // Get USDT wallet
-        const userWallets = await getWalletsByUserId(userId);
-        const usdtWallet = userWallets.find(
-            (wallet) => wallet.currency === 'USDT'
-        );
+        const verified = await verifyEmail(token);
 
-        if (!usdtWallet) {
-            return res.status(400).json({ error: 'USDT wallet not found' });
+        if (!verified) {
+            return res.status(400).json({ 
+                error: 'Invalid or expired verification token' 
+            });
         }
 
-        // Check if user has sufficient balance
-        const currentBalance = new Decimal(usdtWallet.balance);
-        const withdrawAmount = new Decimal(amount);
-
-        if (withdrawAmount.gt(currentBalance)) {
-            return res.status(400).json({ error: 'Insufficient balance' });
-        }
-
-        // Generate a unique transaction hash for this withdrawal
-        const transactionHash = `WITHDRAW-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
-
-        // Create a new transaction record
-        const newTransaction: NewTransaction = {
-            userId: userId,
-            walletId: usdtWallet.id,
-            type: 'withdrawal',
-            currency: 'USDT',
-            amount: amount,
-            transactionHash: transactionHash,
-            status: 'pending', // Initial status is 'pending'
-            walletAddress: walletAddress, // Store the destination wallet address
-        };
-
-        const insertedTransaction = await db
-            .insert(transactions)
-            .values(newTransaction)
-            .returning();
-
-        // DO NOT UPDATE WALLET BALANCE HERE - Admin will approve first
-
-        res.status(201).json({
-            message: 'Withdrawal request submitted for approval',
-            transaction: insertedTransaction[0],
+        // Email has been verified successfully
+        res.status(200).json({ 
+            message: 'Email verified successfully' 
         });
     } catch (error) {
-        console.error('Withdrawal error:', error);
+        console.error('Email verification error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }) as RequestHandler);
 
 /**
- * Get user's withdrawal requests
+ * Resend verification email endpoint
  */
-router.get('/withdrawals', isAuthenticated, (async (
-    req: Request,
-    res: Response
-) => {
+router.post('/resend-verification', isAuthenticated, (async (req: Request, res: Response) => {
     try {
-        const userId = req.session.userId as string;
+        const userId = req.session.userId!;
         
-        const userWithdrawals = await db
-            .select()
-            .from(transactions)
-            .where(
-                and(
-                    eq(transactions.userId, userId),
-                    eq(transactions.type, 'withdrawal')
-                )
-            );
+        // Get user details
+        const user = await getUserById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Check if user's email is already verified
+        const userRecord = await db.select()
+            .from(users)
+            .where(eq(users.id, userId))
+            .then(results => results[0]);
             
-        res.status(200).json({ withdrawals: userWithdrawals });
+        if (userRecord.emailVerified) {
+            return res.status(400).json({ 
+                error: 'Email is already verified' 
+            });
+        }
+        
+        // Import the modules inside the route handler to avoid circular references
+        const { createEmailVerificationToken } = require('./email');
+        const { sendVerificationEmail } = require('../shared/email');
+        
+        // Generate and store a new verification token
+        const verificationToken = await createEmailVerificationToken(userId);
+        
+        // Send verification email
+        await sendVerificationEmail(
+            user.email,
+            verificationToken,
+            user.firstName || undefined
+        );
+        
+        res.status(200).json({ 
+            message: 'Verification email sent' 
+        });
     } catch (error) {
-        console.error('Get withdrawals error:', error);
+        console.error('Resend verification error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }) as RequestHandler);
 
 /**
- * Get pending withdrawal transactions (admin only)
+ * Request password reset endpoint
  */
-router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
-    req: Request,
-    res: Response
-) => {
+router.post('/forgot-password', (async (req: Request, res: Response) => {
     try {
-        const pendingWithdrawals = await db
-            .select({
-                transaction: transactions,
-                availableBalance: wallets.balance,
-            })
-            .from(transactions)
-            .leftJoin(wallets, eq(transactions.walletId, wallets.id))
-            .where(
-                and(
-                    eq(transactions.type, 'withdrawal'),
-                    eq(transactions.status, 'pending')
-                )
-            );
-
-        // For each user with pending withdrawals, calculate the total pending amount
-        const usersPendingTotals = new Map<string, Decimal>();
-
-        // First pass: gather all pending withdrawal amounts by user
-        pendingWithdrawals.forEach(({ transaction }) => {
-            const userId = transaction.userId;
-            const amount = new Decimal(transaction.amount);
-            
-            if (usersPendingTotals.has(userId)) {
-                usersPendingTotals.set(userId, usersPendingTotals.get(userId)!.plus(amount));
-            } else {
-                usersPendingTotals.set(userId, amount);
-            }
+        const { email } = req.body;
+        
+        if (!email) {
+            return res.status(400).json({ error: 'Email is required' });
+        }
+        
+        // Find user by email
+        const user = await getUserByEmail(email);
+        
+        // We don't want to reveal if an email exists in our database for security reasons
+        // So we return a success message even if the email doesn't exist
+        if (!user) {
+            return res.status(200).json({ 
+                message: 'If your email exists in our system, you will receive a password reset link shortly' 
+            });
+        }
+        
+        // Generate and store a password reset token
+        const resetToken = await createPasswordResetToken(user.id);
+        
+        // Send password reset email
+        await sendPasswordResetEmail(email, resetToken);
+        
+        res.status(200).json({ 
+            message: 'If your email exists in our system, you will receive a password reset link shortly' 
         });
-
-        // Second pass: enhance each transaction with available balance after all pending withdrawals
-        const enhancedWithdrawals = pendingWithdrawals.map(({ transaction, availableBalance }) => {
-            const userId = transaction.userId;
-            const totalPending = usersPendingTotals.get(userId) || new Decimal(0);
-            const currentBalance = new Decimal(availableBalance || '0');
-            const availableAfterPending = currentBalance.minus(totalPending).toString();
-            
-            // Check if this specific withdrawal can be approved based on current available balance
-            // and considering all other pending withdrawals that would be processed before this one
-            const pendingBeforeThis = pendingWithdrawals
-                .filter(pw => 
-                    pw.transaction.userId === userId && 
-                    new Date(pw.transaction.createdAt) < new Date(transaction.createdAt)
-                )
-                .reduce((acc, curr) => acc.plus(new Decimal(curr.transaction.amount)), new Decimal(0));
-            
-            const availableForThis = currentBalance.minus(pendingBeforeThis);
-            const canApprove = availableForThis.gte(new Decimal(transaction.amount));
-
-            return {
-                ...transaction,
-                currentBalance: availableBalance,
-                availableBalance: availableAfterPending,
-                canApprove
-            };
-        });
-
-        res.status(200).json({ withdrawals: enhancedWithdrawals });
     } catch (error) {
-        console.error('Get pending withdrawals error:', error);
+        console.error('Password reset request error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
+ * Reset password endpoint
+ */
+router.post('/reset-password', (async (req: Request, res: Response) => {
+    try {
+        const { token, password } = req.body;
+        
+        if (!token || !password) {
+            return res.status(400).json({ 
+                error: 'Token and password are required' 
+            });
+        }
+        
+        // Verify reset token and get user ID
+        const userId = await verifyPasswordResetToken(token);
+        
+        if (!userId) {
+            return res.status(400).json({ 
+                error: 'Invalid or expired reset token' 
+            });
+        }
+        
+        // Get user details
+        const user = await getUserById(userId);
+        
+        if (!user) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        // Generate a new salt
+        const salt = randomBytes(16).toString('hex');
+        
+        // Hash the new password with the salt
+        const hashedPassword = scryptSync(password, salt, 64).toString('hex');
+        
+        // Update user with new password and clear reset token
+        await db.update(users)
+            .set({
+                password: hashedPassword,
+                salt: salt,
+                resetPasswordToken: null,
+                resetPasswordExpiry: null
+            })
+            .where(eq(users.id, userId));
+        
+        // Send password reset confirmation email
+        await sendPasswordResetConfirmationEmail(user.email);
+        
+        res.status(200).json({ 
+            message: 'Password reset successfully' 
+        });
+    } catch (error) {
+        console.error('Password reset error:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }) as RequestHandler);
@@ -670,62 +824,25 @@ router.post(
                     .json({ error: 'Transaction is not pending' });
             }
 
-            // Get the user's wallet
-            const userWallets = await getWalletsByUserId(transaction.userId);
-            const wallet = userWallets.find(
-                (w) => w.currency === transaction.currency
-            );
-
-            if (!wallet) {
-                return res.status(400).json({ error: 'Wallet not found' });
-            }
-
-            // Check other pending withdrawals with earlier timestamps
-            const earlierPendingWithdrawals = await db
-                .select()
-                .from(transactions)
-                .where(
-                    and(
-                        eq(transactions.userId, transaction.userId),
-                        eq(transactions.type, 'withdrawal'),
-                        eq(transactions.status, 'pending'),
-                        eq(transactions.currency, transaction.currency),
-                        lt(transactions.createdAt, transaction.createdAt)
-                    )
-                );
-            
-            // Calculate total amount of earlier pending withdrawals
-            const totalEarlierPending = earlierPendingWithdrawals.reduce(
-                (total, tx) => total.plus(new Decimal(tx.amount)),
-                new Decimal(0)
-            );
-            
-            // Check if user has sufficient balance after accounting for earlier pending withdrawals
-            const currentBalance = new Decimal(wallet.balance);
-            const withdrawAmount = new Decimal(transaction.amount);
-            const availableBalance = currentBalance.minus(totalEarlierPending);
-            
-            if (withdrawAmount.gt(availableBalance)) {
-                return res.status(400).json({ 
-                    error: 'Insufficient balance after considering earlier pending withdrawals',
-                    availableBalance: availableBalance.toString(),
-                    requestedAmount: withdrawAmount.toString()
-                });
-            }
-
-            // Update wallet balance
-            const newBalance = currentBalance.minus(withdrawAmount).toString();
-
-            await db
-                .update(wallets)
-                .set({ balance: newBalance, updatedAt: new Date() })
-                .where(eq(wallets.id, wallet.id));
-
             // Update transaction status
             await db
                 .update(transactions)
                 .set({ status: 'approved', updatedAt: new Date() })
                 .where(eq(transactions.id, transactionId));
+
+            // Get user's email for notification
+            const user = await getUserById(transaction.userId);
+            
+            if (user) {
+                // Send email notification
+                await sendTransactionNotificationEmail(
+                    user.email,
+                    'withdrawal',
+                    'approved',
+                    transaction.amount,
+                    transaction.currency
+                );
+            }
 
             res.status(200).json({ message: 'Withdrawal approved' });
         } catch (error) {
@@ -747,11 +864,6 @@ router.post(
             const { transactionId } = req.params;
             const { rejectionReason } = req.body;
 
-            // Validate input
-            if (!rejectionReason) {
-                return res.status(400).json({ error: 'Rejection reason is required' });
-            }
-
             // Find the transaction
             const transaction = await db
                 .select()
@@ -770,22 +882,88 @@ router.post(
                     .json({ error: 'Transaction is not pending' });
             }
 
-            // Update transaction status
+            // Validate rejectionReason
+            if (!rejectionReason) {
+                return res
+                    .status(400)
+                    .json({ error: 'Rejection reason is required' });
+            }
+
+            // Get the user's wallet
+            const userWallets = await getWalletsByUserId(transaction.userId);
+            const wallet = userWallets.find(
+                (w) => w.id === transaction.walletId
+            );
+
+            if (!wallet) {
+                return res.status(400).json({ error: 'Wallet not found' });
+            }
+
+            // Refund the amount back to the wallet
+            const currentBalance = new Decimal(wallet.balance);
+            const withdrawalAmount = new Decimal(transaction.amount);
+            const newBalance = currentBalance.plus(withdrawalAmount).toString();
+
+            await db
+                .update(wallets)
+                .set({ balance: newBalance, updatedAt: new Date() })
+                .where(eq(wallets.id, wallet.id));
+
+            // Update transaction status with rejection reason
             await db
                 .update(transactions)
-                .set({ 
-                    status: 'rejected', 
+                .set({
+                    status: 'rejected',
+                    rejectionReason,
                     updatedAt: new Date(),
-                    rejectionReason: rejectionReason || 'No reason provided'
                 })
                 .where(eq(transactions.id, transactionId));
 
-            res.status(200).json({ message: 'Withdrawal rejected' });
+            // Get user's email for notification
+            const user = await getUserById(transaction.userId);
+            
+            if (user) {
+                // Send email notification
+                await sendTransactionNotificationEmail(
+                    user.email,
+                    'withdrawal',
+                    'rejected',
+                    transaction.amount,
+                    transaction.currency,
+                    rejectionReason
+                );
+            }
+
+            res.status(200).json({ message: 'Withdrawal rejected and amount refunded' });
         } catch (error) {
             console.error('Reject withdrawal error:', error);
             res.status(500).json({ error: 'Internal server error' });
         }
     }) as RequestHandler
 );
+
+/**
+ * Get pending withdrawal transactions (admin only)
+ */
+router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        const pendingWithdrawals = await db
+            .select()
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.status, 'pending'),
+                    eq(transactions.type, 'withdrawal')
+                )
+            );
+        res.status(200).json({ withdrawals: pendingWithdrawals });
+    } catch (error) {
+        console.error('Get pending withdrawals error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
 
 export default router;

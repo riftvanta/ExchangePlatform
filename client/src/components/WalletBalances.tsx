@@ -28,32 +28,25 @@ function WalletBalances() {
     });
 
     if (isLoading) {
-        return <div>Loading wallets...</div>;
+        return <div className="loading">Loading wallets...</div>;
     }
 
     if (isError) {
-        return <div>Error loading wallets</div>;
+        return <div className="alert error">Error loading wallets</div>;
+    }
+
+    if (!wallets || wallets.length === 0) {
+        return <div className="alert info">No wallets found. Create a wallet to get started.</div>;
     }
 
     return (
-        <div>
-            <h2>Wallet Balances</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Currency</th>
-                        <th>Balance</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {wallets?.map((wallet) => (
-                        <tr key={wallet.id}>
-                            <td>{wallet.currency}</td>
-                            <td>{wallet.balance}</td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+        <div className="wallet-balances">
+            {wallets.map((wallet) => (
+                <div className="wallet-card" key={wallet.id}>
+                    <div className="currency">{wallet.currency}</div>
+                    <div className="balance">{wallet.balance}</div>
+                </div>
+            ))}
         </div>
     );
 }

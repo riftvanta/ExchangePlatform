@@ -1,6 +1,8 @@
 import { scryptSync, randomBytes } from 'crypto';
 import { createUser, getUserByEmail } from './storage';
 import { NewUsers, Users } from '../shared/types';
+import { createEmailVerificationToken } from './email';
+import { sendVerificationEmail, sendWelcomeEmail } from '../shared/email';
 
 /**
  * Registers a new user with secure password hashing
@@ -25,10 +27,27 @@ export async function registerUser(newUserData: NewUsers) {
             ...newUserData,
             password: hashedPassword,
             salt,
+            emailVerified: false,
         };
 
         // Save the user to the database
         const user = await createUser(newUser);
+
+        // Generate and store email verification token
+        const verificationToken = await createEmailVerificationToken(user.id);
+
+        // Send verification email
+        await sendVerificationEmail(
+            user.email, 
+            verificationToken,
+            user.firstName || undefined
+        );
+
+        // Also send welcome email
+        await sendWelcomeEmail(
+            user.email,
+            user.firstName || undefined
+        );
 
         return user;
     } catch (error: any) {

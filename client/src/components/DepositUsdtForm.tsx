@@ -102,9 +102,8 @@ function DepositUsdtForm() {
 
     return (
         <div>
-            <h2>Deposit USDT</h2>
-            <form onSubmit={handleSubmit}>
-                <div>
+            <form onSubmit={handleSubmit} className="deposit-form">
+                <div className="form-group">
                     <label htmlFor="amount">Amount:</label>
                     <input
                         type="text"
@@ -114,7 +113,7 @@ function DepositUsdtForm() {
                         required
                     />
                 </div>
-                <div>
+                <div className="form-group">
                     <label htmlFor="transactionHash">Transaction Hash:</label>
                     <input
                         type="text"
@@ -124,7 +123,7 @@ function DepositUsdtForm() {
                         required
                     />
                 </div>
-                <div>
+                <div className="form-group">
                     <label htmlFor="file">Deposit Screenshot:</label>
                     <input
                         type="file"
@@ -133,18 +132,24 @@ function DepositUsdtForm() {
                         onChange={handleFileChange}
                         required
                     />
-                    {file && <p>File selected: {file.name}</p>}
+                    {file && (
+                        <div className="file-info">File selected: {file.name}</div>
+                    )}
                     {fileKey && (
-                        <p style={{ color: 'green' }}>
+                        <div className="alert success">
                             File uploaded successfully
-                        </p>
+                        </div>
                     )}
                 </div>
-                {error && <p style={{ color: 'red' }}>{error}</p>}
+                {error && <div className="alert error">{error}</div>}
                 {successMessage && (
-                    <p style={{ color: 'green' }}>{successMessage}</p>
+                    <div className="alert success">{successMessage}</div>
                 )}
-                <button type="submit" disabled={depositMutation.isPending}>
+                <button 
+                    type="submit" 
+                    disabled={depositMutation.isPending}
+                    className="button"
+                >
                     {depositMutation.isPending
                         ? 'Submitting Deposit...'
                         : 'Deposit USDT'}

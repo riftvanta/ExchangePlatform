@@ -9,9 +9,12 @@ import CreateWalletForm from './components/CreateWalletForm';
 import DepositUsdtForm from './components/DepositUsdtForm';
 import WithdrawUsdtForm from './components/WithdrawUsdtForm';
 import TransactionHistory from './components/TransactionHistory';
-import WithdrawalHistory from './components/WithdrawalHistory';
 import AdminDepositsPage from './pages/admin/AdminDepositsPage';
 import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage';
+import VerifyEmail from './pages/VerifyEmail';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import ResendVerification from './pages/ResendVerification';
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -54,78 +57,70 @@ const Dashboard = () => {
     return (
         <div className="dashboard">
             <h2>Dashboard</h2>
-            <div className="dashboard-links">
-                <Link
-                    to="/profile"
-                    style={{
-                        display: 'inline-block',
-                        margin: '1rem 0',
-                        color: '#646cff',
-                        textDecoration: 'none',
-                    }}
-                >
+            
+            {user && !user.emailVerified && (
+                <div className="verification-banner">
+                    <div className="message">
+                        <span role="img" aria-label="Warning">⚠️</span> Email not verified - Some features may be limited.
+                    </div>
+                    <Link 
+                        to="/resend-verification" 
+                        className="button text"
+                    >
+                        Verify your email
+                    </Link>
+                </div>
+            )}
+            
+            <div className="nav-links">
+                <Link to="/profile" className="nav-link">
                     View Profile
                 </Link>
                 {/* Admin links - only visible to admins */}
                 {user?.isAdmin && (
                     <>
-                        <Link
-                            to="/admin/deposits"
-                            style={{
-                                display: 'inline-block',
-                                margin: '1rem 0 1rem 1rem',
-                                color: '#646cff',
-                                textDecoration: 'none',
-                            }}
-                        >
+                        <Link to="/admin/deposits" className="nav-link">
                             Manage Deposits
                         </Link>
-                        <Link
-                            to="/admin/withdrawals"
-                            style={{
-                                display: 'inline-block',
-                                margin: '1rem 0 1rem 1rem',
-                                color: '#646cff',
-                                textDecoration: 'none',
-                            }}
-                        >
+                        <Link to="/admin/withdrawals" className="nav-link">
                             Manage Withdrawals
                         </Link>
                     </>
                 )}
             </div>
-            <WalletBalances />
-            <CreateWalletForm />
             
-            <div className="transaction-section" style={{ 
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '20px',
-                marginTop: '20px'
-            }}>
-                <div style={{ flex: '1 1 400px' }}>
+            <div className="dashboard-section">
+                <h2>Wallet Balances</h2>
+                <WalletBalances />
+            </div>
+            
+            <div className="dashboard-section">
+                <h2>Create New Wallet</h2>
+                <CreateWalletForm />
+            </div>
+            
+            <div className="transaction-section">
+                <div className="dashboard-section">
+                    <h2>Deposit USDT</h2>
                     <DepositUsdtForm />
                 </div>
-                <div style={{ flex: '1 1 400px' }}>
+                <div className="dashboard-section">
+                    <h2>Withdraw USDT</h2>
                     <WithdrawUsdtForm />
                 </div>
             </div>
             
-            <div className="history-section" style={{ marginTop: '30px' }}>
+            <div className="dashboard-section">
                 <h2>Transaction Records</h2>
-                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 400px' }}>
-                        <TransactionHistory />
-                    </div>
-                    <div style={{ flex: '1 1 400px' }}>
-                        <WithdrawalHistory />
-                    </div>
+                <div className="single-section">
+                    <TransactionHistory />
                 </div>
             </div>
             
             <button 
                 onClick={logout}
-                style={{ marginTop: '30px' }}
+                className="button"
+                style={{ marginTop: 'var(--spacing-lg)' }}
             >
                 Logout
             </button>
@@ -180,6 +175,14 @@ function App() {
                                 </ProtectedRoute>
                             }
                         />
+                        <Route path="/verify-email" element={<VerifyEmail />} />
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/resend-verification" element={
+                            <ProtectedRoute>
+                                <ResendVerification />
+                            </ProtectedRoute>
+                        } />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </BrowserRouter>

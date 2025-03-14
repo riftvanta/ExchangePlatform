@@ -17,6 +17,7 @@ export type User = {
     firstName?: string | null;
     lastName?: string | null;
     isAdmin?: boolean;
+    emailVerified: boolean;
 };
 
 // Define the shape of our authentication context

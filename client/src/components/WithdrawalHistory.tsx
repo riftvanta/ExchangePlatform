@@ -33,22 +33,22 @@ function WithdrawalHistory() {
     });
 
     if (isLoading) {
-        return <div>Loading withdrawal history...</div>;
+        return <div className="loading">Loading withdrawal history...</div>;
     }
 
     if (isError) {
-        return <div>Error loading withdrawal history</div>;
+        return <div className="alert error">Error loading withdrawal history</div>;
     }
 
     // Function to format status with color coding
     const formatStatus = (status: string) => {
         switch(status) {
             case 'pending':
-                return <span style={{ color: 'orange' }}>Pending</span>;
+                return <span className="status warning">Pending</span>;
             case 'approved':
-                return <span style={{ color: 'green' }}>Approved</span>;
+                return <span className="status success">Approved</span>;
             case 'rejected':
-                return <span style={{ color: 'red' }}>Rejected</span>;
+                return <span className="status error">Rejected</span>;
             default:
                 return <span>{status}</span>;
         }
@@ -56,17 +56,11 @@ function WithdrawalHistory() {
 
     // Check if there are any withdrawals
     if (!withdrawals || withdrawals.length === 0) {
-        return (
-            <div>
-                <h2>Withdrawal History</h2>
-                <p>You have no withdrawal history.</p>
-            </div>
-        );
+        return <div className="alert info">No withdrawal history found.</div>;
     }
 
     return (
         <div>
-            <h2>Withdrawal History</h2>
             <table>
                 <thead>
                     <tr>

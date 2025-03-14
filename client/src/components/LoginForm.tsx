@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function LoginForm() {
     const { login, error, user, isLoading } = useAuth();
@@ -54,10 +54,7 @@ function LoginForm() {
                 </div>
 
                 {error && (
-                    <div
-                        className="error-message"
-                        style={{ color: 'red', marginBottom: '1rem' }}
-                    >
+                    <div className="alert error">
                         {error}
                     </div>
                 )}
@@ -66,6 +63,21 @@ function LoginForm() {
                     {isLoading ? 'Logging in...' : 'Login'}
                 </button>
             </form>
+
+            <div className="mt-4 text-center">
+                <Link to="/forgot-password" className="text-blue-500 hover:underline">
+                    Forgot your password?
+                </Link>
+            </div>
+
+            <div className="mt-2 text-center">
+                <p className="text-sm text-gray-600">
+                    Need to verify your email?{' '}
+                    <Link to="/resend-verification" className="text-blue-500 hover:underline">
+                        Resend verification email
+                    </Link>
+                </p>
+            </div>
         </div>
     );
 }

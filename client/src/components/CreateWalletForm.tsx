@@ -50,9 +50,8 @@ function CreateWalletForm() {
 
     return (
         <div>
-            <h2>Create New Wallet</h2>
-            <form onSubmit={handleSubmit}>
-                <div>
+            <form onSubmit={handleSubmit} className="create-wallet-form">
+                <div className="form-group">
                     <label htmlFor="currency">Currency:</label>
                     <select
                         id="currency"
@@ -65,8 +64,12 @@ function CreateWalletForm() {
                         <option value="JOD">JOD</option>
                     </select>
                 </div>
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                <button type="submit" disabled={isLoading}>
+                {error && <div className="alert error">{error}</div>}
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="button"
+                >
                     {isLoading ? 'Creating...' : 'Create Wallet'}
                 </button>
             </form>

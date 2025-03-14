@@ -107,19 +107,18 @@ function WithdrawUsdtForm() {
 
     return (
         <div>
-            <h2>Withdraw USDT</h2>
             {usdtWallet ? (
-                <div className="wallet-info" style={{ marginBottom: '15px' }}>
-                    <p><strong>Available Balance:</strong> {usdtBalance} USDT</p>
+                <div className="wallet-info">
+                    <strong>Available Balance:</strong> {usdtBalance} USDT
                 </div>
             ) : (
-                <div className="wallet-info" style={{ marginBottom: '15px', color: 'orange' }}>
-                    <p>You need to create a USDT wallet first</p>
+                <div className="alert warning">
+                    You need to create a USDT wallet first
                 </div>
             )}
             
-            <form onSubmit={handleSubmit}>
-                <div>
+            <form onSubmit={handleSubmit} className="withdraw-form">
+                <div className="form-group">
                     <label htmlFor="amount">Amount (USDT):</label>
                     <input
                         id="amount"
@@ -131,7 +130,7 @@ function WithdrawUsdtForm() {
                         disabled={!usdtWallet}
                     />
                 </div>
-                <div>
+                <div className="form-group">
                     <label htmlFor="walletAddress">Destination Wallet Address:</label>
                     <input
                         id="walletAddress"
@@ -143,13 +142,17 @@ function WithdrawUsdtForm() {
                         disabled={!usdtWallet}
                     />
                 </div>
-                {error && <p style={{ color: 'red' }}>{error}</p>}
-                {successMessage && <p style={{ color: 'green' }}>{successMessage}</p>}
-                <button type="submit" disabled={isLoading || !usdtWallet}>
+                {error && <div className="alert error">{error}</div>}
+                {successMessage && <div className="alert success">{successMessage}</div>}
+                <button 
+                    type="submit" 
+                    disabled={isLoading || !usdtWallet}
+                    className="button"
+                >
                     {isLoading ? 'Processing...' : 'Request Withdrawal'}
                 </button>
             </form>
-            <div className="instructions" style={{ marginTop: '20px', fontSize: '0.9em', color: '#666' }}>
+            <div className="instructions">
                 <p><strong>Important:</strong> Withdrawal requests are subject to admin approval. Your funds will not be deducted until your request is approved.</p>
                 <p>Please double-check the destination wallet address before submitting. We cannot recover funds sent to incorrect addresses.</p>
             </div>

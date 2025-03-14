@@ -71,6 +71,13 @@
       "when": 1741904755928,
       "tag": "0009_purple_johnny_blaze",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1741909449762,
+      "tag": "0010_curly_bushwacker",
+      "breakpoints": true
     }
   ]
 }

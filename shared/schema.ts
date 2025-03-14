@@ -27,6 +27,11 @@ export const users = pgTable('users', {
     firstName: text('first_name'),
     lastName: text('last_name'),
     isAdmin: boolean('is_admin').notNull().default(false),
+    emailVerified: boolean('email_verified').notNull().default(false),
+    verificationToken: text('verification_token'),
+    verificationTokenExpiry: timestamp('verification_token_expiry', { withTimezone: true }),
+    resetPasswordToken: text('reset_password_token'),
+    resetPasswordExpiry: timestamp('reset_password_expiry', { withTimezone: true }),
 });
 
 // Create a session table for connect-pg-simple
@@ -91,7 +96,6 @@ export const transactions = pgTable('transactions', {
         .defaultNow(),
     fileKey: text('file_key'),
     rejectionReason: text('rejection_reason'),
-    walletAddress: text('wallet_address'), // Destination wallet address for withdrawals
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
