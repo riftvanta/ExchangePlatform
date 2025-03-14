@@ -1167,7 +1167,16 @@ router.post(
                 );
             }
 
-            res.status(200).json({ message: 'Withdrawal rejected' });
+            res.status(200).json({ 
+                message: 'Withdrawal rejected', 
+                details: {
+                    transactionId,
+                    amount: transaction.amount,
+                    currency: transaction.currency,
+                    userId: transaction.userId,
+                    rejectionReason: rejectionReason
+                }
+            });
         } catch (error) {
             console.error('Reject withdrawal error:', error);
             res.status(500).json({ error: 'Internal server error' });

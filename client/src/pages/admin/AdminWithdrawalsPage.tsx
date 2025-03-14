@@ -145,9 +145,16 @@ function AdminWithdrawalsPage() {
             }
             return response.json();
         },
-        onSuccess: () => {
+        onSuccess: (data, variables) => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
-            toast.success('Withdrawal rejected successfully');
+            // Find the withdrawal details for the toast message
+            const withdrawalDetails = pendingWithdrawals?.find(w => w.id === variables.withdrawalId);
+            const amountInfo = withdrawalDetails ? `${withdrawalDetails.amount} USDT` : '';
+            
+            toast.success(
+                `Withdrawal ${amountInfo ? `of ${amountInfo} ` : ''}rejected successfully. 
+                Reason: ${variables.rejectionReason.slice(0, 30)}${variables.rejectionReason.length > 30 ? '...' : ''}`
+            );
             setError(null);
             setRejectingWithdrawalId(null);
             setRejectionReason('');
@@ -155,6 +162,7 @@ function AdminWithdrawalsPage() {
         onError: (err: any) => {
             setError(err.message || 'Failed to reject withdrawal');
             toast.error(err.message || 'Failed to reject withdrawal');
+            // Don't clear rejecting ID on error so user can try again with the same form open
         },
     });
 

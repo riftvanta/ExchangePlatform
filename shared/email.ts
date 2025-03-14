@@ -199,13 +199,24 @@ export async function sendTransactionNotificationEmail(
             <p>Your ${transactionType} request for <strong>${amount} ${currency}</strong> has been approved and processed.</p>
         `;
     } else if (status === 'rejected') {
-        subject = `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} Request Rejected`;
+        subject = `${transactionType === 'withdrawal' ? 'Withdrawal Not Processed' : `${transactionType.charAt(0).toUpperCase() + transactionType.slice(1)} Request Rejected`}`;
         const reasonText = rejectionReason ? `Reason: ${rejectionReason}` : 'Please contact support for more information.';
-        textContent = `We're sorry, but your ${transactionType} request for ${amount} ${currency} has been rejected. ${reasonText}`;
-        htmlContent = `
-            <p>We're sorry, but your ${transactionType} request for <strong>${amount} ${currency}</strong> has been rejected.</p>
-            <p>${rejectionReason ? `<strong>Reason:</strong> ${rejectionReason}` : 'Please contact support for more information.'}</p>
-        `;
+        
+        if (transactionType === 'withdrawal') {
+            textContent = `Your withdrawal request for ${amount} ${currency} was not processed. No funds have been deducted from your account. ${reasonText}`;
+            htmlContent = `
+                <p>Your withdrawal request for <strong>${amount} ${currency}</strong> was not processed.</p>
+                <p><strong>Important:</strong> No funds have been deducted from your account. Your balance remains unchanged.</p>
+                <p>${rejectionReason ? `<strong>Reason for rejection:</strong> ${rejectionReason}` : 'Please contact support for more information.'}</p>
+                <p>You can submit a new withdrawal request at any time from your dashboard.</p>
+            `;
+        } else {
+            textContent = `We're sorry, but your ${transactionType} request for ${amount} ${currency} has been rejected. ${reasonText}`;
+            htmlContent = `
+                <p>We're sorry, but your ${transactionType} request for <strong>${amount} ${currency}</strong> has been rejected.</p>
+                <p>${rejectionReason ? `<strong>Reason:</strong> ${rejectionReason}` : 'Please contact support for more information.'}</p>
+            `;
+        }
     }
 
     const msg = {
