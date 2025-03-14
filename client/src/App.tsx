@@ -24,6 +24,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { CssVarsProvider } from '@mui/joy/styles';
 import CssBaseline from '@mui/joy/CssBaseline';
 import theme from './theme';
+import { DashboardJoy } from './components/ui';
 
 // Protected Route component that checks for authentication
 // and redirects to login if user is not authenticated
@@ -88,6 +89,10 @@ const Dashboard = () => {
                 {/* Joy UI Example link */}
                 <Link to="/joy-ui-examples" className="nav-link">
                     Joy UI Examples
+                </Link>
+                {/* Joy UI Dashboard link */}
+                <Link to="/dashboard-joy" className="nav-link">
+                    Joy UI Dashboard
                 </Link>
                 {/* Admin links - only visible to admins */}
                 {user?.isAdmin && (
@@ -184,6 +189,16 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <SpecializedComponentsPage />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Joy UI Dashboard */}
+                        <Route
+                            path="/dashboard-joy"
+                            element={
+                                <ProtectedRoute>
+                                    <DashboardJoy />
                                 </ProtectedRoute>
                             }
                         />

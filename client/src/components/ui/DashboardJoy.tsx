@@ -1,11 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import WalletBalances from '../WalletBalances';
 import CreateWalletFormJoy from './CreateWalletFormJoy';
 import WithdrawUsdtFormJoy from './WithdrawUsdtFormJoy';
-import TransactionHistoryJoy from './TransactionHistoryJoy';
-import DepositUsdtForm from '../DepositUsdtForm';
 
 // Import our Joy UI components
 import { 
@@ -19,20 +17,30 @@ import {
   Sheet,
   Divider,
   AspectRatio,
-  Chip
+  Chip,
+  TransactionHistoryJoy,
+  DepositUsdtFormJoy,
+  NotificationContainer
 } from './index';
 
 function DashboardJoy() {
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    console.log('DashboardJoy component mounted');
+  }, []);
+
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  console.log('DashboardJoy rendering, user:', user);
+
   return (
     <Box sx={{ p: 3, maxWidth: '1200px', mx: 'auto' }}>
+      <NotificationContainer />
       <Box sx={{ 
         display: 'flex', 
         flexDirection: { xs: 'column', md: 'row' },
@@ -121,7 +129,7 @@ function DashboardJoy() {
               <Typography level="h2">Deposit USDT</Typography>
               <Divider sx={{ my: 2 }} />
               <Box sx={{ p: 1 }}>
-                <DepositUsdtForm />
+                <DepositUsdtFormJoy />
               </Box>
             </CardContent>
           </Card>

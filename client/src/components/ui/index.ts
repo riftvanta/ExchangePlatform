@@ -22,6 +22,7 @@ export { default as FileUpload } from './FileUpload';
 export { default as Notification, NotificationContainer } from './Notification';
 export { default as CreateWalletFormJoy } from './CreateWalletFormJoy';
 export { default as WithdrawUsdtFormJoy } from './WithdrawUsdtFormJoy';
+export { default as DepositUsdtFormJoy } from './DepositUsdtFormJoy';
 export { default as DashboardJoy } from './DashboardJoy';
 export { default as TransactionHistoryJoy } from './TransactionHistoryJoy';
 
