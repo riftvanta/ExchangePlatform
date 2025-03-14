@@ -72,6 +72,33 @@ export const wallets = pgTable(
 );
 
 /**
+ * Deposit Addresses table schema
+ * Defines the structure for storing user deposit addresses generated from HD wallet
+ */
+export const depositAddresses = pgTable(
+    'deposit_addresses',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        userId: uuid('user_id')
+            .notNull()
+            .references(() => users.id),
+        currency: text('currency').notNull(),
+        network: text('network').notNull(),
+        address: text('address').notNull().unique(),
+        path: text('path').notNull(),
+        isActive: boolean('is_active').notNull().default(true),
+        label: text('label'),
+        lastUsed: timestamp('last_used', { withTimezone: true }),
+        createdAt: timestamp('created_at', { withTimezone: true })
+            .notNull()
+            .defaultNow(),
+        updatedAt: timestamp('updated_at', { withTimezone: true })
+            .notNull()
+            .defaultNow(),
+    }
+);
+
+/**
  * Transactions table schema
  * Defines the structure for storing transaction information
  */
@@ -96,11 +123,13 @@ export const transactions = pgTable('transactions', {
         .defaultNow(),
     fileKey: text('file_key'),
     rejectionReason: text('rejection_reason'),
+    depositAddress: text('deposit_address'),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
     wallets: many(wallets),
     transactions: many(transactions),
+    depositAddresses: many(depositAddresses),
 }));
 
 export const walletsRelations = relations(wallets, ({ one, many }) => ({
@@ -122,6 +151,13 @@ export const transactionsRelations = relations(transactions, ({ one }) => ({
     }),
 }));
 
+export const depositAddressesRelations = relations(depositAddresses, ({ one }) => ({
+    user: one(users, {
+        fields: [depositAddresses.userId],
+        references: [users.id],
+    }),
+}));
+
 // Type definitions
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -129,5 +165,7 @@ export type Wallet = typeof wallets.$inferSelect;
 export type NewWallet = typeof wallets.$inferInsert;
 export type Transaction = typeof transactions.$inferSelect;
 export type NewTransaction = typeof transactions.$inferInsert;
+export type DepositAddress = typeof depositAddresses.$inferSelect;
+export type NewDepositAddress = typeof depositAddresses.$inferInsert;
 
 export default users;

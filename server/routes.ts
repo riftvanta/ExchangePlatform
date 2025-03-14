@@ -31,6 +31,8 @@ import {
 } from '../shared/email';
 import { scryptSync, randomBytes } from 'crypto';
 import { users } from '../shared/schema';
+import depositAddressRouter from './routes/depositAddress'; // Import deposit address router
+import socketService from './services/socketService';
 
 const router = Router();
 
@@ -282,7 +284,7 @@ router.post('/deposit/usdt', isAuthenticated, (async (
 ) => {
     try {
         const userId = req.session.userId as string;
-        const { amount, transactionHash, fileKey } = req.body;
+        const { amount, transactionHash, fileKey, depositAddress } = req.body;
 
         // Validate input
         if (
@@ -299,6 +301,21 @@ router.post('/deposit/usdt', isAuthenticated, (async (
         }
         if (!fileKey) {
             return res.status(400).json({ error: 'File key is required' });
+        }
+
+        // Verify deposit address if provided
+        if (depositAddress) {
+            const hdWalletService = (await import('./services/hdWalletService')).default;
+            const isValidAddress = await hdWalletService.verifyAddressOwnership(
+                depositAddress,
+                userId
+            );
+            
+            if (!isValidAddress) {
+                return res.status(400).json({ 
+                    error: 'Invalid deposit address for this user' 
+                });
+            }
         }
 
         // Get USDT wallet
@@ -321,6 +338,7 @@ router.post('/deposit/usdt', isAuthenticated, (async (
             transactionHash: transactionHash,
             status: 'pending', // Initial status is 'pending'
             fileKey: fileKey,
+            depositAddress: depositAddress, // Include the deposit address
         };
 
         const insertedTransaction = await db
@@ -492,6 +510,24 @@ router.post(
                     .json({ error: 'Transaction is not pending' });
             }
 
+            // Verify deposit address ownership if a deposit address is provided
+            if (transaction.depositAddress) {
+                const hdWalletService = (await import('./services/hdWalletService')).default;
+                const isValidAddress = await hdWalletService.verifyAddressOwnership(
+                    transaction.depositAddress,
+                    transaction.userId
+                );
+                
+                if (!isValidAddress) {
+                    return res.status(400).json({ 
+                        error: 'Invalid deposit address for this user' 
+                    });
+                }
+                
+                // Mark the address as used
+                await hdWalletService.markAddressAsUsed(transaction.depositAddress);
+            }
+
             // Get the user's wallet
             const userWallets = await getWalletsByUserId(transaction.userId);
             const wallet = userWallets.find(
@@ -517,6 +553,16 @@ router.post(
                 .update(transactions)
                 .set({ status: 'approved', updatedAt: new Date() })
                 .where(eq(transactions.id, transactionId));
+
+            // Emit real-time update via Socket.IO
+            socketService.emitTransactionUpdate(transaction.userId, {
+                transactionId,
+                status: 'approved',
+                type: 'deposit',
+                amount: transaction.amount,
+                currency: transaction.currency,
+                updatedAt: new Date()
+            });
 
             // Get user's email for notification
             const user = await getUserById(transaction.userId);
@@ -586,6 +632,17 @@ router.post(
                     updatedAt: new Date(),
                 })
                 .where(eq(transactions.id, transactionId));
+
+            // Emit real-time update via Socket.IO
+            socketService.emitTransactionUpdate(transaction.userId, {
+                transactionId,
+                status: 'rejected',
+                type: 'deposit',
+                amount: transaction.amount,
+                currency: transaction.currency,
+                updatedAt: new Date(),
+                rejectionReason
+            });
 
             // Get user's email for notification
             const user = await getUserById(transaction.userId);
@@ -992,6 +1049,16 @@ router.post(
                 .set({ status: 'approved', updatedAt: new Date() })
                 .where(eq(transactions.id, transactionId));
 
+            // Emit real-time update via Socket.IO
+            socketService.emitTransactionUpdate(transaction.userId, {
+                transactionId,
+                status: 'approved',
+                type: 'withdrawal',
+                amount: transaction.amount,
+                currency: transaction.currency,
+                updatedAt: new Date()
+            });
+
             // Get user's email for notification
             const user = await getUserById(transaction.userId);
             
@@ -1081,6 +1148,17 @@ router.post(
                 })
                 .where(eq(transactions.id, transactionId));
 
+            // Emit real-time update via Socket.IO
+            socketService.emitTransactionUpdate(transaction.userId, {
+                transactionId,
+                status: 'rejected',
+                type: 'withdrawal',
+                amount: transaction.amount,
+                currency: transaction.currency,
+                updatedAt: new Date(),
+                rejectionReason
+            });
+
             // Get user's email for notification
             const user = await getUserById(transaction.userId);
             
@@ -1105,10 +1183,16 @@ router.post(
 );
 
 /**
- * Health check endpoint for testing connectivity
+ * Health check endpoint for Docker and monitoring
  */
-router.get('/health', (async (req: Request, res: Response) => {
-    res.status(200).json({ status: 'ok', message: 'Server is running', timestamp: new Date().toISOString() });
-}) as RequestHandler);
+router.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
+
+/**
+ * Register the deposit address router
+ * This provides endpoints for creating and managing unique deposit addresses
+ */
+router.use('/deposit-address', depositAddressRouter);
 
 export default router;

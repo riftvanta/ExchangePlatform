@@ -7,6 +7,8 @@ import pgSession from 'connect-pg-simple';
 import hdWalletService from './services/hdWalletService';
 import depositMonitorService from './services/depositMonitorService';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import http from 'http';
+import socketService from './services/socketService';
 
 // Load environment variables
 dotenv.config();
@@ -68,11 +70,43 @@ const initializeServices = async () => {
 
 // Start server if not being imported for testing
 if (require.main === module) {
-    app.listen(PORT, () => {
+    // Create HTTP server using Express app
+    const server = http.createServer(app);
+    
+    // Initialize socket service with HTTP server and session middleware
+    const sessionMiddleware = session({
+        store: new PostgresStore({
+            conString: process.env.DATABASE_URL,
+            createTableIfMissing: true,
+            tableName: 'session',
+        }),
+        secret: process.env.SESSION_SECRET!,
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            maxAge: 1000 * 60 * 60 * 24 * 7,
+            sameSite: 'lax',
+            path: '/',
+        },
+        name: 'usdt_jod_sid',
+    });
+    
+    // Initialize socket service
+    socketService.init(server, sessionMiddleware);
+    
+    // Listen on HTTP server instead of Express app
+    server.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         
         // Initialize services after server starts
         initializeServices();
+    });
+} else {
+    // For testing, just export the app
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT} (test mode)`);
     });
 }
 

@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSocketStore, SocketEvents, TransactionUpdateData } from '../../lib/socketService';
+import { toast } from 'react-toastify';
 
 interface Transaction {
     id: string;
@@ -26,6 +28,7 @@ function AdminDepositsPage() {
     const [viewingTransactionId, setViewingTransactionId] = useState<
         string | null
     >(null);
+    const socket = useSocketStore(state => state.socket);
 
     const {
         data: pendingDeposits,
@@ -45,6 +48,36 @@ function AdminDepositsPage() {
     });
 
     const queryClient = useQueryClient();
+
+    // Subscribe to real-time new pending transaction notifications
+    useEffect(() => {
+        if (!socket) return;
+        
+        // Handle new pending transaction notification
+        const handleNewPendingTransaction = (data: TransactionUpdateData) => {
+            console.log('New pending transaction received:', data);
+            
+            // Show toast notification
+            toast.info(`New pending ${data.type} of ${data.amount} ${data.currency} received!`, {
+                onClick: () => {
+                    // Refresh the data when clicking on the notification
+                    queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
+                    window.scrollTo(0, 0); // Scroll to top to see the new transaction
+                }
+            });
+            
+            // Refresh the data automatically
+            queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
+        };
+        
+        // Listen for new pending transactions
+        socket.on(SocketEvents.NEW_PENDING_TRANSACTION, handleNewPendingTransaction);
+        
+        // Clean up on unmount
+        return () => {
+            socket.off(SocketEvents.NEW_PENDING_TRANSACTION, handleNewPendingTransaction);
+        };
+    }, [socket, queryClient]);
 
     const approveMutation = useMutation({
         mutationFn: async (transactionId: string) => {
@@ -66,10 +99,12 @@ function AdminDepositsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
             setError(null); // Clear the error
+            toast.success('Deposit approved successfully');
         },
         onError: (err: any) => {
             // Add error handler
             setError(err.message || 'Failed to approve deposit');
+            toast.error(err.message || 'Failed to approve deposit');
         },
     });
 
@@ -100,10 +135,12 @@ function AdminDepositsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'deposits'] });
             setError(null);
+            toast.success('Deposit rejected successfully');
         },
         onError: (err: any) => {
             // Add error handler
             setError(err.message || 'Failed to reject deposit');
+            toast.error(err.message || 'Failed to reject deposit');
         },
     });
 

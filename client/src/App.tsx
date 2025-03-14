@@ -16,6 +16,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ResendVerification from './pages/ResendVerification';
 import JoyUIExamplePage from './pages/JoyUIExamplePage';
+import SpecializedComponentsPage from './pages/SpecializedComponentsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -173,6 +174,16 @@ function App() {
                             element={
                                 <ProtectedRoute>
                                     <JoyUIExamplePage />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        {/* Specialized Components Page */}
+                        <Route
+                            path="/specialized-components"
+                            element={
+                                <ProtectedRoute>
+                                    <SpecializedComponentsPage />
                                 </ProtectedRoute>
                             }
                         />

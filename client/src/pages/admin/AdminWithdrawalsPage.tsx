@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSocketStore, SocketEvents, TransactionUpdateData } from '../../lib/socketService';
+import { toast } from 'react-toastify';
 
 interface EnhancedWithdrawal {
     id: string;
@@ -25,6 +27,7 @@ function AdminWithdrawalsPage() {
     const [rejectingTransactionId, setRejectingTransactionId] = useState<
         string | null
     >(null);
+    const socket = useSocketStore(state => state.socket);
 
     const {
         data: pendingWithdrawals,
@@ -43,6 +46,39 @@ function AdminWithdrawalsPage() {
     });
 
     const queryClient = useQueryClient();
+
+    // Subscribe to real-time new pending transaction notifications
+    useEffect(() => {
+        if (!socket) return;
+        
+        // Handle new pending transaction notification
+        const handleNewPendingTransaction = (data: TransactionUpdateData) => {
+            // Only show notification for withdrawal transactions
+            if (data.type !== 'withdrawal') return;
+            
+            console.log('New pending withdrawal received:', data);
+            
+            // Show toast notification
+            toast.info(`New pending withdrawal of ${data.amount} ${data.currency} received!`, {
+                onClick: () => {
+                    // Refresh the data when clicking on the notification
+                    queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
+                    window.scrollTo(0, 0); // Scroll to top to see the new transaction
+                }
+            });
+            
+            // Refresh the data automatically
+            queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
+        };
+        
+        // Listen for new pending transactions
+        socket.on(SocketEvents.NEW_PENDING_TRANSACTION, handleNewPendingTransaction);
+        
+        // Clean up on unmount
+        return () => {
+            socket.off(SocketEvents.NEW_PENDING_TRANSACTION, handleNewPendingTransaction);
+        };
+    }, [socket, queryClient]);
 
     const approveMutation = useMutation({
         mutationFn: async (transactionId: string) => {
@@ -64,9 +100,11 @@ function AdminWithdrawalsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
             setError(null);
+            toast.success('Withdrawal approved successfully');
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to approve withdrawal');
+            toast.error(err.message || 'Failed to approve withdrawal');
         },
     });
 
@@ -97,9 +135,11 @@ function AdminWithdrawalsPage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'withdrawals'] });
             setError(null);
+            toast.success('Withdrawal rejected successfully');
         },
         onError: (err: any) => {
             setError(err.message || 'Failed to reject withdrawal');
+            toast.error(err.message || 'Failed to reject withdrawal');
         },
     });
 

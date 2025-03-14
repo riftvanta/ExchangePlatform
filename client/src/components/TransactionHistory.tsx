@@ -1,5 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useSocketStore, SocketEvents, TransactionUpdateData } from '../lib/socketService';
+import { toast } from 'react-toastify';
 
 interface Transaction {
     id: string;
@@ -19,6 +21,8 @@ interface Transaction {
 
 function TransactionHistory() {
     const [filter, setFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
+    const queryClient = useQueryClient();
+    const socket = useSocketStore((state) => state.socket);
 
     const {
         data: transactions,
@@ -35,6 +39,61 @@ function TransactionHistory() {
             return data.transactions;
         },
     });
+
+    // Subscribe to real-time transaction updates
+    useEffect(() => {
+        if (!socket) return;
+        
+        // Handle transaction status updates
+        const handleTransactionUpdate = (data: TransactionUpdateData) => {
+            console.log('Transaction update received:', data);
+            
+            // Show toast notification
+            let message = '';
+            if (data.status === 'approved') {
+                message = `Your ${data.type} of ${data.amount} ${data.currency} has been approved!`;
+                toast.success(message);
+            } else if (data.status === 'rejected') {
+                message = `Your ${data.type} of ${data.amount} ${data.currency} has been rejected. Reason: ${data.rejectionReason || 'No reason provided.'}`;
+                toast.error(message);
+            }
+            
+            // Invalidate the transactions query to refresh the data
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        };
+        
+        // Listen for transaction updates
+        socket.on(SocketEvents.TRANSACTION_UPDATE, handleTransactionUpdate);
+        
+        // Clean up on unmount
+        return () => {
+            socket.off(SocketEvents.TRANSACTION_UPDATE, handleTransactionUpdate);
+        };
+    }, [socket, queryClient]);
+    
+    // Subscribe to real-time deposit updates
+    useEffect(() => {
+        if (!socket) return;
+        
+        // Handle deposit updates
+        const handleDepositUpdate = (data: any) => {
+            console.log('Deposit update received:', data);
+            
+            // Show toast notification
+            toast.info(`New deposit of ${data.amount} ${data.currency} detected and is awaiting approval.`);
+            
+            // Invalidate the transactions query to refresh the data
+            queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        };
+        
+        // Listen for deposit updates
+        socket.on(SocketEvents.DEPOSIT_UPDATE, handleDepositUpdate);
+        
+        // Clean up on unmount
+        return () => {
+            socket.off(SocketEvents.DEPOSIT_UPDATE, handleDepositUpdate);
+        };
+    }, [socket, queryClient]);
 
     // Function to format date in MM/DD/YYYY, HH:MM format
     const formatDate = (dateString: string) => {

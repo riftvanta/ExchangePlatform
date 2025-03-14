@@ -78,6 +78,13 @@
       "when": 1741909449762,
       "tag": "0010_curly_bushwacker",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1741953814811,
+      "tag": "0011_fat_black_panther",
+      "breakpoints": true
     }
   ]
 }

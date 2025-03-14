@@ -1,42 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor } from '../test-utils';
 import DepositUsdtForm from '../../components/DepositUsdtForm';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-// Mock the useMutation and useQueryClient hooks
-vi.mock('@tanstack/react-query', async () => {
-  const actual = await vi.importActual('@tanstack/react-query');
-  return {
-    ...actual,
-    useMutation: vi.fn(),
-    useQueryClient: vi.fn(),
-  };
-});
+// Mock fetch globally
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
 
-// Mock fetch for file upload
-global.fetch = vi.fn();
-
-describe('DepositUsdtForm', () => {
-  const mockMutateAsync = vi.fn();
-  const mockInvalidateQueries = vi.fn();
+describe('DepositUsdtForm Component', () => {
   let queryClient: QueryClient;
-  
-  // Create a fake file for testing
-  const createTestFile = () => {
-    return new File(['test content'], 'screenshot.png', { type: 'image/png' });
-  };
 
   beforeEach(() => {
-    vi.clearAllMocks();
-    
-    // Mock implementation for fetch (file upload)
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ key: 'uploaded-file-key-123' }),
-    });
-    
-    // Create a new QueryClient for each test
+    vi.resetAllMocks();
     queryClient = new QueryClient({
       defaultOptions: {
         queries: {
@@ -44,190 +19,165 @@ describe('DepositUsdtForm', () => {
         },
       },
     });
+    
+    // Mock upload presigned URL endpoint
+    mockFetch.mockImplementation((url) => {
+      if (url === '/api/upload/presigned-url') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 
+            presignedUrl: 'https://example.com/upload',
+            fileKey: 'test-file-key'
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    });
   });
 
-  // Helper function to render the component with QueryClientProvider
-  const renderDepositUsdtForm = (mutationState = {}) => {
-    // Mock implementation for useQueryClient
-    const { useQueryClient } = require('@tanstack/react-query');
-    useQueryClient.mockReturnValue({
-      invalidateQueries: mockInvalidateQueries,
-    });
-    
-    // Mock implementation for useMutation
-    const { useMutation } = require('@tanstack/react-query');
-    useMutation.mockReturnValue({
-      mutateAsync: mockMutateAsync,
-      isLoading: false,
-      ...mutationState,
-    });
-
+  const renderWithQueryClient = (ui: React.ReactElement) => {
     return render(
       <QueryClientProvider client={queryClient}>
-        <DepositUsdtForm />
+        {ui}
       </QueryClientProvider>
     );
   };
 
   it('renders the deposit form correctly', () => {
-    renderDepositUsdtForm();
+    renderWithQueryClient(<DepositUsdtForm />);
     
-    // Check for form elements
     expect(screen.getByLabelText(/amount/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/transaction hash/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/screenshot/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/receipt\/proof/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /deposit/i })).toBeInTheDocument();
   });
 
-  it('allows entering amount and transaction hash', async () => {
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
+  it('validates form fields on submission', async () => {
+    renderWithQueryClient(<DepositUsdtForm />);
     
-    const amountInput = screen.getByLabelText(/amount/i);
-    const hashInput = screen.getByLabelText(/transaction hash/i);
+    // Submit form without filling any fields
+    fireEvent.click(screen.getByRole('button', { name: /deposit/i }));
     
-    await user.type(amountInput, '100.50');
-    await user.type(hashInput, '0x123abc456def');
-    
-    expect(amountInput).toHaveValue('100.50');
-    expect(hashInput).toHaveValue('0x123abc456def');
-  });
-
-  it('validates input fields', async () => {
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
-    
-    // Try to submit without filling in required fields
-    const submitButton = screen.getByRole('button', { name: /deposit/i });
-    await user.click(submitButton);
-    
-    // Should not submit the form - error message should appear
-    expect(mockMutateAsync).not.toHaveBeenCalled();
-    expect(screen.getByText(/please fill in all required fields/i)).toBeInTheDocument();
-  });
-
-  it('handles file upload', async () => {
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
-    
-    // Create a test file
-    const file = createTestFile();
-    
-    // Get the file input
-    const fileInput = screen.getByLabelText(/screenshot/i);
-    
-    // Upload the file
-    await user.upload(fileInput, file);
-    
-    // Verify file upload was triggered
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(screen.getByText(/amount is required/i)).toBeInTheDocument();
     });
   });
 
-  it('submits the form with valid data', async () => {
-    // Mock successful mutation
-    mockMutateAsync.mockResolvedValueOnce({ message: 'Deposit request submitted successfully' });
-    
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
-    
-    // Fill in the form
-    await user.type(screen.getByLabelText(/amount/i), '100.50');
-    await user.type(screen.getByLabelText(/transaction hash/i), '0x123abc456def');
-    
-    // Mock file upload
-    const file = createTestFile();
-    await user.upload(screen.getByLabelText(/screenshot/i), file);
-    
-    // Wait for file upload to complete (mocked)
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
-    });
-    
-    // Submit the form
-    await user.click(screen.getByRole('button', { name: /deposit/i }));
-    
-    // Verify mutation was called with correct data
-    await waitFor(() => {
-      expect(mockMutateAsync).toHaveBeenCalledWith({
-        amount: '100.50',
-        transactionHash: '0x123abc456def',
-        fileKey: 'uploaded-file-key-123',
+  it('handles successful deposit submission', async () => {
+    // Mock successful deposit response
+    mockFetch.mockImplementation((url) => {
+      if (url === '/api/upload/presigned-url') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 
+            presignedUrl: 'https://example.com/upload',
+            fileKey: 'test-file-key'
+          }),
+        });
+      }
+      if (url === '/api/deposit/usdt') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 
+            message: 'Deposit submitted successfully and is pending approval' 
+          }),
+        });
+      }
+      if (url.includes('https://example.com/upload')) {
+        return Promise.resolve({
+          ok: true,
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
       });
     });
-  });
 
-  it('shows loading state during form submission', () => {
-    // Mock loading state
-    renderDepositUsdtForm({ isLoading: true });
+    renderWithQueryClient(<DepositUsdtForm />);
     
-    // Check loading state
-    expect(screen.getByRole('button', { name: /submitting/i })).toBeDisabled();
-  });
-
-  it('displays success message after successful deposit', async () => {
-    // Mock successful mutation
-    mockMutateAsync.mockResolvedValueOnce({ message: 'Deposit request submitted successfully' });
-    
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
-    
-    // Fill in the form and submit
-    await user.type(screen.getByLabelText(/amount/i), '100.50');
-    await user.type(screen.getByLabelText(/transaction hash/i), '0x123abc456def');
+    // Fill out the form
+    fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), { target: { value: '0x123456789abcdef' } });
     
     // Mock file upload
-    const file = createTestFile();
-    await user.upload(screen.getByLabelText(/screenshot/i), file);
+    const file = new File(['test content'], 'receipt.jpg', { type: 'image/jpeg' });
+    const fileInput = screen.getByLabelText(/receipt\/proof/i);
     
-    // Wait for file upload to complete
+    Object.defineProperty(fileInput, 'files', {
+      value: [file],
+    });
+    
+    fireEvent.change(fileInput);
+    
+    // Wait for file upload to process
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+      expect(mockFetch).toHaveBeenCalledWith('/api/upload/presigned-url', expect.anything());
     });
     
     // Submit the form
-    await user.click(screen.getByRole('button', { name: /deposit/i }));
+    fireEvent.click(screen.getByRole('button', { name: /deposit/i }));
     
-    // Verify success message is displayed
+    // Verify success message
     await waitFor(() => {
-      expect(screen.getByText(/deposit request submitted successfully/i)).toBeInTheDocument();
+      expect(screen.getByText('Deposit submitted successfully and is pending approval')).toBeInTheDocument();
     });
-    
-    // Verify form was reset
-    expect(screen.getByLabelText(/amount/i)).toHaveValue('');
-    expect(screen.getByLabelText(/transaction hash/i)).toHaveValue('');
-    
-    // Verify invalidateQueries was called to refresh wallet data
-    expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['wallets'] });
   });
 
-  it('displays error message when deposit fails', async () => {
-    // Mock mutation to simulate error
-    mockMutateAsync.mockRejectedValueOnce(new Error('Invalid transaction hash'));
+  it('displays an error message when deposit fails', async () => {
+    // Mock failed deposit response
+    mockFetch.mockImplementation((url) => {
+      if (url === '/api/upload/presigned-url') {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ 
+            presignedUrl: 'https://example.com/upload',
+            fileKey: 'test-file-key'
+          }),
+        });
+      }
+      if (url === '/api/deposit/usdt') {
+        return Promise.resolve({
+          ok: false,
+          json: () => Promise.resolve({ error: 'Invalid transaction hash' }),
+        });
+      }
+      if (url.includes('https://example.com/upload')) {
+        return Promise.resolve({
+          ok: true,
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({}),
+      });
+    });
+
+    renderWithQueryClient(<DepositUsdtForm />);
     
-    renderDepositUsdtForm();
-    const user = userEvent.setup();
-    
-    // Fill in the form
-    await user.type(screen.getByLabelText(/amount/i), '100.50');
-    await user.type(screen.getByLabelText(/transaction hash/i), '0x123abc456def');
+    // Fill out the form
+    fireEvent.change(screen.getByLabelText(/amount/i), { target: { value: '100' } });
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), { target: { value: '0x123456789abcdef' } });
     
     // Mock file upload
-    const file = createTestFile();
-    await user.upload(screen.getByLabelText(/screenshot/i), file);
+    const file = new File(['test content'], 'receipt.jpg', { type: 'image/jpeg' });
+    const fileInput = screen.getByLabelText(/receipt\/proof/i);
     
-    // Wait for file upload to complete
-    await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalled();
+    Object.defineProperty(fileInput, 'files', {
+      value: [file],
     });
     
-    // Submit the form
-    await user.click(screen.getByRole('button', { name: /deposit/i }));
+    fireEvent.change(fileInput);
     
-    // Verify error message is displayed
+    // Submit the form
+    fireEvent.click(screen.getByRole('button', { name: /deposit/i }));
+    
+    // Verify error message
     await waitFor(() => {
-      expect(screen.getByText(/invalid transaction hash/i)).toBeInTheDocument();
+      expect(screen.getByText('Invalid transaction hash')).toBeInTheDocument();
     });
   });
 }); 

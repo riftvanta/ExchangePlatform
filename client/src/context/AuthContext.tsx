@@ -6,6 +6,7 @@ import {
     ReactNode,
 } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSocketStore } from '../lib/socketService';
 
 // Define the User type based on the data structure from the /api/me endpoint
 export type User = {
@@ -101,6 +102,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         checkSession();
     }, []);
+
+    // Connect/disconnect socket based on authentication status
+    useEffect(() => {
+        const socketStore = useSocketStore.getState();
+        
+        if (user) {
+            // Connect to socket when authenticated
+            socketStore.connect();
+        } else {
+            // Disconnect when not authenticated
+            socketStore.resetState();
+        }
+        
+        // Clean up on unmount
+        return () => {
+            socketStore.disconnect();
+        };
+    }, [user]);
 
     // Function to login the user
     const loginUser = async (credentials: {

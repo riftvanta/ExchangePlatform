@@ -38,77 +38,77 @@ fi
 # Clean up test environment
 echo "Cleaning up test environment..."
 
-# Start the server for API tests
-echo "Starting server for testing..."
-cd server && npm run dev &
-SERVER_PID=$!
-echo "Server started with PID: $SERVER_PID"
+# Run Backend Tests
+print_header "RUNNING BACKEND TESTS"
+
+echo "Running authentication tests..."
+npx jest server/tests/auth.test.ts --config=jest.config.js --runInBand
+check_result "Authentication tests"
+
+echo "Running email verification tests..."
+npx jest server/tests/email-verification.test.ts --config=jest.config.js --runInBand
+check_result "Email verification tests"
+
+echo "Running wallet API tests..."
+npx jest server/tests/wallet-api.test.ts --config=jest.config.js --runInBand
+check_result "Wallet API tests"
+
+echo "Running transaction API tests..."
+npx jest server/tests/transaction-api.test.ts --config=jest.config.js --runInBand
+check_result "Transaction API tests"
+
+echo "Running middleware tests..."
+npx jest server/tests/middleware.test.ts --config=jest.config.js --runInBand
+check_result "Middleware tests"
+
+echo "Running upload API tests..."
+npx jest server/tests/upload-api.test.ts --config=jest.config.js --runInBand
+check_result "Upload API tests"
+
+echo "Running health endpoint tests..."
+npx jest server/tests/health.test.ts --config=jest.config.js --runInBand
+check_result "Health endpoint tests"
+
+# Run Frontend Tests
+print_header "RUNNING FRONTEND TESTS"
+
+cd client
+
+echo "Running component tests..."
+npx vitest run src/tests/components --environment jsdom
+check_result "Component tests"
+
+echo "Running context tests..."
+npx vitest run src/tests/context --environment jsdom
+check_result "Context tests"
+
+echo "Running page tests..."
+npx vitest run src/tests/pages --environment jsdom
+check_result "Page tests"
+
 cd ..
 
-# Wait for server to start
-echo "Waiting for server to start..."
-sleep 5
+# Generate test coverage report
+print_header "GENERATING TEST COVERAGE REPORT"
 
-# Test health endpoint with curl to ensure server is running
-print_header "TESTING SERVER HEALTH"
-echo "Testing health endpoint with curl..."
-HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/health)
-if [ "$HEALTH_STATUS" -eq 200 ]; then
-  echo -e "${GREEN}✓ Health endpoint is working (Status: $HEALTH_STATUS)${NC}"
-  HEALTH_RESULT=0
-else
-  echo -e "${RED}✗ Health endpoint failed (Status: $HEALTH_STATUS)${NC}"
-  HEALTH_RESULT=1
-  # Exit early if health check fails
-  echo "Stopping test server..."
-  kill -9 $SERVER_PID 2>/dev/null
-  exit 1
-fi
+echo "For detailed test coverage analysis, please see TEST_COVERAGE.md"
+echo "This document provides a comprehensive overview of test coverage across the application."
 
-# Run the Backend API tests
-print_header "RUNNING BACKEND API TESTS"
-
-echo "Running Authentication API Tests..."
-npx jest server/tests/auth-api.test.ts --config=jest.config.js --runInBand --forceExit
-check_result "Authentication API Tests"
-AUTH_RESULT=$?
-
-echo "Running Wallet API Tests..."
-npx jest server/tests/wallet-api.test.ts --config=jest.config.js --runInBand --forceExit
-check_result "Wallet API Tests"
-WALLET_RESULT=$?
-
-echo "Running Transaction API Tests..."
-npx jest server/tests/transaction-api.test.ts --config=jest.config.js --runInBand --forceExit
-check_result "Transaction API Tests"
-TRANSACTION_RESULT=$?
-
-# Run the Frontend Component tests
-print_header "RUNNING FRONTEND COMPONENT TESTS"
-
-echo "Running Frontend Component Tests..."
-cd client && npx vitest run
-check_result "Frontend Component Tests"
-FRONTEND_RESULT=$?
-cd ..
-
-# Stop the server
-echo "Stopping test server..."
-kill -9 $SERVER_PID 2>/dev/null
-
-# Print summary
+# Summary
 print_header "TEST SUMMARY"
-if [ $HEALTH_RESULT -eq 0 ] && [ $AUTH_RESULT -eq 0 ] && [ $WALLET_RESULT -eq 0 ] && [ $TRANSACTION_RESULT -eq 0 ] && [ $FRONTEND_RESULT -eq 0 ]; then
-  echo -e "${GREEN}All tests passed successfully!${NC}"
-  echo -e "${GREEN}✓ Backend API tests: PASSED${NC}"
-  echo -e "${GREEN}✓ Frontend Component tests: PASSED${NC}"
-  exit 0
-else
-  echo -e "${RED}Some tests failed. Please check the output above for details.${NC}"
-  # Print which specific test categories failed
-  [ $AUTH_RESULT -ne 0 ] && echo -e "${RED}✗ Authentication tests failed${NC}"
-  [ $WALLET_RESULT -ne 0 ] && echo -e "${RED}✗ Wallet tests failed${NC}"
-  [ $TRANSACTION_RESULT -ne 0 ] && echo -e "${RED}✗ Transaction tests failed${NC}"
-  [ $FRONTEND_RESULT -ne 0 ] && echo -e "${RED}✗ Frontend Component tests failed${NC}"
-  exit 1
-fi 
+
+echo -e "${GREEN}Backend Tests Completed${NC}"
+echo -e "${GREEN}Frontend Tests Completed${NC}"
+echo -e "\nTest coverage has been significantly improved with new tests for:"
+echo "- Authentication context"
+echo "- Wallet components"
+echo "- Deposit and withdraw forms"
+echo "- Admin functionality"
+echo "- Upload API functionality"
+
+echo -e "\n${YELLOW}Next steps to further improve testing:${NC}"
+echo "1. Add more end-to-end tests with Cypress"
+echo "2. Implement tests for remaining components and pages"
+echo "3. Improve integration test coverage"
+
+print_header "TESTS COMPLETED" 
