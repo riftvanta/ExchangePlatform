@@ -13,25 +13,18 @@ vi.mock('@tanstack/react-query', async () => {
 });
 
 describe('WalletBalances', () => {
-  // Set up mock for useQuery before each test
-  beforeEach(() => {
-    const useQueryMock = vi.fn();
-    const { useQuery } = require('@tanstack/react-query');
-    useQuery.mockImplementation(useQueryMock);
-  });
-
   // Helper function to render the component with QueryClientProvider
   const renderWalletBalances = (queryResult = {}) => {
     const queryClient = new QueryClient();
     
     // Set up the mock return value for this specific test
     const { useQuery } = require('@tanstack/react-query');
-    useQuery.mockImplementation(() => ({
+    useQuery.mockReturnValue({
       isLoading: false,
       isError: false,
       data: [],
       ...queryResult,
-    }));
+    });
     
     return render(
       <QueryClientProvider client={queryClient}>

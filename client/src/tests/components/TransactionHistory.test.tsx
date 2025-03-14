@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TransactionHistory from '../../components/TransactionHistory';
@@ -61,13 +61,6 @@ describe('TransactionHistory', () => {
     },
   ];
 
-  // Set up mock for useQuery before each test
-  beforeEach(() => {
-    const useQueryMock = vi.fn();
-    const { useQuery } = require('@tanstack/react-query');
-    useQuery.mockImplementation(useQueryMock);
-  });
-
   // Helper function to render the component with QueryClientProvider
   const renderTransactionHistory = (queryResult = {}) => {
     const queryClient = new QueryClient({
@@ -80,12 +73,12 @@ describe('TransactionHistory', () => {
 
     // Set up the mock return value for this specific test
     const { useQuery } = require('@tanstack/react-query');
-    useQuery.mockImplementation(() => ({
+    useQuery.mockReturnValue({
       data: mockTransactions,
       isLoading: false,
       isError: false,
       ...queryResult,
-    }));
+    });
 
     return render(
       <QueryClientProvider client={queryClient}>

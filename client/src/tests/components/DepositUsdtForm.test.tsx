@@ -30,12 +30,6 @@ describe('DepositUsdtForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Mock implementation for useQueryClient
-    const { useQueryClient } = require('@tanstack/react-query');
-    useQueryClient.mockImplementation(() => ({
-      invalidateQueries: mockInvalidateQueries,
-    }));
-    
     // Mock implementation for fetch (file upload)
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
@@ -54,13 +48,19 @@ describe('DepositUsdtForm', () => {
 
   // Helper function to render the component with QueryClientProvider
   const renderDepositUsdtForm = (mutationState = {}) => {
+    // Mock implementation for useQueryClient
+    const { useQueryClient } = require('@tanstack/react-query');
+    useQueryClient.mockReturnValue({
+      invalidateQueries: mockInvalidateQueries,
+    });
+    
     // Mock implementation for useMutation
     const { useMutation } = require('@tanstack/react-query');
-    useMutation.mockImplementation(() => ({
+    useMutation.mockReturnValue({
       mutateAsync: mockMutateAsync,
       isLoading: false,
       ...mutationState,
-    }));
+    });
 
     return render(
       <QueryClientProvider client={queryClient}>

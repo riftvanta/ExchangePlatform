@@ -22,12 +22,6 @@ describe('CreateWalletForm', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Mock implementation for useQueryClient
-    const { useQueryClient } = require('@tanstack/react-query');
-    useQueryClient.mockImplementation(() => ({
-      invalidateQueries: mockInvalidateQueries,
-    }));
-    
     // Create a new QueryClient for each test
     queryClient = new QueryClient({
       defaultOptions: {
@@ -40,13 +34,19 @@ describe('CreateWalletForm', () => {
 
   // Helper function to render the component with QueryClientProvider
   const renderCreateWalletForm = (mutationState = {}) => {
+    // Mock implementation for useQueryClient
+    const { useQueryClient } = require('@tanstack/react-query');
+    useQueryClient.mockReturnValue({
+      invalidateQueries: mockInvalidateQueries,
+    });
+    
     // Mock implementation for useMutation
     const { useMutation } = require('@tanstack/react-query');
-    useMutation.mockImplementation(() => ({
+    useMutation.mockReturnValue({
       mutateAsync: mockMutateAsync,
       isLoading: false,
       ...mutationState,
-    }));
+    });
 
     return render(
       <QueryClientProvider client={queryClient}>
