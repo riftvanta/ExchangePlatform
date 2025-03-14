@@ -12,11 +12,30 @@ const TransactionHistory = lazy(() => import('./TransactionHistory'));
 
 // Skeleton loader components
 const BalancesSkeleton = () => (
-  <div className="skeleton-loader" role="status" aria-label="Loading wallet balances">
-    <div className="skeleton-header" aria-hidden="true"></div>
-    <div className="skeleton-line" aria-hidden="true"></div>
-    <div className="skeleton-line" aria-hidden="true"></div>
-    <div className="skeleton-line" aria-hidden="true"></div>
+  <div className="wallet-balances-container skeleton-loader" role="status" aria-label="Loading wallet balances">
+    <div className="wallet-balances-header" aria-hidden="true">
+      <div className="skeleton-header"></div>
+    </div>
+    <div className="wallet-balances-grid" aria-hidden="true">
+      <div className="balance-card skeleton">
+        <div className="skeleton-line small"></div>
+        <div className="skeleton-line large"></div>
+        <div className="skeleton-line small"></div>
+        <div className="skeleton-actions">
+          <div className="skeleton-button small"></div>
+          <div className="skeleton-button small"></div>
+        </div>
+      </div>
+      <div className="balance-card skeleton">
+        <div className="skeleton-line small"></div>
+        <div className="skeleton-line large"></div>
+        <div className="skeleton-line small"></div>
+        <div className="skeleton-actions">
+          <div className="skeleton-button small"></div>
+          <div className="skeleton-button small"></div>
+        </div>
+      </div>
+    </div>
   </div>
 );
 
@@ -115,10 +134,9 @@ const LazyDashboard = () => {
       </nav>
       
       <section 
-        className="dashboard-section" 
+        className="dashboard-section wallet-section" 
         aria-labelledby="wallet-balances-heading"
       >
-        <h2 id="wallet-balances-heading">Wallet Balances</h2>
         <Suspense fallback={<BalancesSkeleton />}>
           <WalletBalances />
         </Suspense>

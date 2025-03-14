@@ -1119,6 +1119,46 @@ h3::after {
   border-width: 0;
 }
 
+/* Non-editable elements cursor defaults */
+table, 
+tbody, 
+thead, 
+tr, 
+th, 
+td, 
+.card, 
+.card-header, 
+.card-body, 
+.card-footer, 
+.transaction-history-container, 
+.transaction-header, 
+.status-badge, 
+.verification-banner, 
+.dashboard-section, 
+.nav-links,
+.admin-page-container,
+.user-withdrawals-section,
+.balance-info-card,
+.deposit-image-container,
+.transaction-table-container,
+.transaction-row,
+.rejection-form,
+.no-data,
+.loading-container {
+  cursor: default;
+  user-select: none;
+}
+
+/* Allow text selection in specific content areas where it makes sense */
+.amount,
+.wallet-address-container,
+.wallet-address,
+.date,
+p, 
+h1, h2, h3, h4, h5, h6 {
+  user-select: none;
+}
+
 /* Transaction History */
 .transaction-history-container {
   margin-top: 1.5rem;
@@ -1793,4 +1833,291 @@ h3::after {
   .user-withdrawals-section {
     padding: 1rem;
   }
+}
+
+/* Enhanced Wallet Balances Section */
+.wallet-balances-container {
+  background: linear-gradient(145deg, #ffffff, #f8fafc);
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05), 
+              0 1px 2px rgba(0, 0, 0, 0.05), 
+              0 0 0 1px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.wallet-balances-container:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), 
+              0 1px 2px rgba(0, 0, 0, 0.05), 
+              0 0 0 1px rgba(0, 0, 0, 0.02);
+  transform: translateY(-2px);
+}
+
+.wallet-balances-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.wallet-balances-header h2 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin: 0;
+  position: relative;
+}
+
+.wallet-balances-header h2:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -0.5rem;
+  width: 40px;
+  height: 3px;
+  background-color: #4299e1;
+  transition: width 0.3s ease;
+}
+
+.wallet-balances-header:hover h2:after {
+  width: 60px;
+}
+
+.refresh-balance-btn {
+  background-color: transparent;
+  color: #4299e1;
+  border: none;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.375rem;
+  transition: all 0.2s ease;
+}
+
+.refresh-balance-btn:hover {
+  background-color: #ebf8ff;
+  color: #2b6cb0;
+}
+
+.wallet-balances-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.balance-card {
+  background-color: #fff;
+  border-radius: 0.5rem;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  animation: fadeIn 0.5s ease-out;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.balance-card:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.balance-card:before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 4px;
+  background-color: #4299e1;
+  opacity: 0.7;
+  border-radius: 4px 0 0 4px;
+}
+
+.balance-card.jod:before {
+  background-color: #9f7aea;
+}
+
+.balance-card.usdt:before {
+  background-color: #38b2ac;
+}
+
+.currency-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #4a5568;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.currency-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: #edf2f7;
+  border-radius: 50%;
+  color: #2d3748;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.balance-amount {
+  font-family: 'Inter', monospace;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0.25rem 0;
+  line-height: 1.2;
+}
+
+.balance-usd-value {
+  font-size: 0.75rem;
+  color: #718096;
+  margin: 0;
+}
+
+.balance-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.balance-action-btn {
+  font-size: 0.75rem;
+  padding: 0.375rem 0.625rem;
+  background-color: #edf2f7;
+  color: #4a5568;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.balance-action-btn:hover {
+  background-color: #e2e8f0;
+  color: #2d3748;
+}
+
+.balance-action-btn.deposit {
+  background-color: #e6fffa;
+  color: #2c7a7b;
+}
+
+.balance-action-btn.deposit:hover {
+  background-color: #b2f5ea;
+}
+
+.balance-action-btn.withdraw {
+  background-color: #fff5f7;
+  color: #9b2c2c;
+}
+
+.balance-action-btn.withdraw:hover {
+  background-color: #fed7e2;
+}
+
+@media (max-width: 640px) {
+  .wallet-balances-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .balance-card {
+    padding: 0.875rem;
+  }
+  
+  .balance-amount {
+    font-size: 1.25rem;
+  }
+}
+
+/* Enhanced skeleton styles for wallet balances */
+.balance-card.skeleton {
+  background-color: #f8fafc;
+  animation: pulse-bg 1.5s infinite;
+}
+
+.skeleton-line {
+  height: 1rem;
+  background-color: #e2e8f0;
+  border-radius: 0.25rem;
+  margin-bottom: 0.75rem;
+  animation: pulse-bg 1.5s infinite;
+}
+
+.skeleton-line.small {
+  width: 40%;
+  height: 0.875rem;
+}
+
+.skeleton-line.large {
+  width: 70%;
+  height: 1.5rem;
+}
+
+.skeleton-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.skeleton-button.small {
+  height: 1.5rem;
+  background-color: #e2e8f0;
+  border-radius: 0.25rem;
+  flex: 1;
+  animation: pulse-bg 1.5s infinite;
+}
+
+.wallet-section {
+  padding: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+}
+
+.wallet-section:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+@keyframes pulse-bg {
+  0% {
+    background-color: #e2e8f0;
+  }
+  50% {
+    background-color: #edf2f7;
+  }
+  100% {
+    background-color: #e2e8f0;
+  }
+}
+
+.user-id-heading {
+  font-size: 1.25rem;
+  color: #2d3748;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 } 
