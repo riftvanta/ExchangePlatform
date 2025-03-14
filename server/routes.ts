@@ -850,6 +850,100 @@ router.post('/reset-password', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 /**
+ * Get pending withdrawal transactions (admin only)
+ */
+router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
+    req: Request,
+    res: Response
+) => {
+    try {
+        // Fetch all pending withdrawal transactions
+        const pendingWithdrawals = await db
+            .select()
+            .from(transactions)
+            .where(
+                and(
+                    eq(transactions.status, 'pending'),
+                    eq(transactions.type, 'withdrawal')
+                )
+            )
+            .orderBy(transactions.createdAt);
+
+        // Group transactions by user for processing
+        const withdrawalsByUser = pendingWithdrawals.reduce((acc, withdrawal) => {
+            if (!acc[withdrawal.userId]) {
+                acc[withdrawal.userId] = [];
+            }
+            acc[withdrawal.userId].push(withdrawal);
+            return acc;
+        }, {} as Record<string, typeof pendingWithdrawals>);
+
+        // Enhance withdrawals with wallet data and approval status
+        const enhancedWithdrawals = [];
+        
+        for (const userId in withdrawalsByUser) {
+            const userWithdrawals = withdrawalsByUser[userId];
+            
+            // Get user's wallets
+            const userWallets = await getWalletsByUserId(userId);
+            
+            // Calculate running balance for each transaction
+            let runningBalance = new Decimal(0);
+            
+            // Find USDT wallet for the user
+            const usdtWallet = userWallets.find(wallet => wallet.currency === 'USDT');
+            
+            if (usdtWallet) {
+                // Start with current wallet balance
+                runningBalance = new Decimal(usdtWallet.balance);
+                
+                // Sort withdrawals by creation date (oldest first)
+                const sortedWithdrawals = [...userWithdrawals].sort((a, b) => 
+                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+                );
+                
+                // Process each withdrawal to determine if it can be approved
+                for (const withdrawal of sortedWithdrawals) {
+                    const withdrawalAmount = new Decimal(withdrawal.amount);
+                    const currentBalance = runningBalance.toString();
+                    const canApprove = runningBalance.greaterThanOrEqualTo(withdrawalAmount);
+                    
+                    // After checking if we can approve, subtract from running balance
+                    if (canApprove) {
+                        runningBalance = runningBalance.minus(withdrawalAmount);
+                    }
+                    
+                    // Add enhanced data to the withdrawal
+                    enhancedWithdrawals.push({
+                        ...withdrawal,
+                        currentBalance: usdtWallet.balance,
+                        availableBalance: runningBalance.toString(),
+                        canApprove,
+                        walletAddress: withdrawal.transactionHash  // The address is stored in transactionHash
+                    });
+                }
+            } else {
+                // If USDT wallet not found, mark all withdrawals as not approvable
+                for (const withdrawal of userWithdrawals) {
+                    enhancedWithdrawals.push({
+                        ...withdrawal,
+                        currentBalance: '0',
+                        availableBalance: '0',
+                        canApprove: false,
+                        walletAddress: withdrawal.transactionHash
+                    });
+                }
+            }
+        }
+        
+        res.status(200).json({ withdrawals: enhancedWithdrawals });
+    } catch (error) {
+        console.error('Get pending withdrawals error:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}) as RequestHandler);
+
+/**
  * Approve a pending withdrawal transaction (admin only)
  */
 router.post(
@@ -876,6 +970,22 @@ router.post(
                 return res
                     .status(400)
                     .json({ error: 'Transaction is not pending' });
+            }
+            
+            // Get user's USDT wallet
+            const userWallets = await getWalletsByUserId(transaction.userId);
+            const wallet = userWallets.find(w => w.currency === 'USDT');
+            
+            if (!wallet) {
+                return res.status(400).json({ error: 'User\'s USDT wallet not found' });
+            }
+            
+            // Check if wallet has sufficient balance
+            const currentBalance = new Decimal(wallet.balance);
+            const withdrawalAmount = new Decimal(transaction.amount);
+            
+            if (withdrawalAmount.greaterThan(currentBalance)) {
+                return res.status(400).json({ error: 'Insufficient funds in user\'s wallet' });
             }
 
             // Update transaction status
@@ -995,30 +1105,6 @@ router.post(
         }
     }) as RequestHandler
 );
-
-/**
- * Get pending withdrawal transactions (admin only)
- */
-router.get('/admin/withdrawals', isAuthenticated, isAdmin, (async (
-    req: Request,
-    res: Response
-) => {
-    try {
-        const pendingWithdrawals = await db
-            .select()
-            .from(transactions)
-            .where(
-                and(
-                    eq(transactions.status, 'pending'),
-                    eq(transactions.type, 'withdrawal')
-                )
-            );
-        res.status(200).json({ withdrawals: pendingWithdrawals });
-    } catch (error) {
-        console.error('Get pending withdrawals error:', error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-}) as RequestHandler);
 
 /**
  * Health check endpoint for testing connectivity
