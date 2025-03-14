@@ -1118,7 +1118,7 @@ router.post(
                     .json({ error: 'Rejection reason is required' });
             }
 
-            // Get the user's wallet
+            // Get the user's wallet for notification purposes only
             const userWallets = await getWalletsByUserId(transaction.userId);
             const wallet = userWallets.find(
                 (w) => w.id === transaction.walletId
@@ -1128,15 +1128,8 @@ router.post(
                 return res.status(400).json({ error: 'Wallet not found' });
             }
 
-            // Refund the amount back to the wallet
-            const currentBalance = new Decimal(wallet.balance);
-            const withdrawalAmount = new Decimal(transaction.amount);
-            const newBalance = currentBalance.plus(withdrawalAmount).toString();
-
-            await db
-                .update(wallets)
-                .set({ balance: newBalance, updatedAt: new Date() })
-                .where(eq(wallets.id, wallet.id));
+            // No need to modify the wallet balance since funds were never deducted
+            // for pending withdrawals - they're only deducted upon approval
 
             // Update transaction status with rejection reason
             await db
@@ -1174,7 +1167,7 @@ router.post(
                 );
             }
 
-            res.status(200).json({ message: 'Withdrawal rejected and amount refunded' });
+            res.status(200).json({ message: 'Withdrawal rejected' });
         } catch (error) {
             console.error('Reject withdrawal error:', error);
             res.status(500).json({ error: 'Internal server error' });
