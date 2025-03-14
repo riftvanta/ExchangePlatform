@@ -46,9 +46,61 @@ interface AuthProviderProps {
 // AuthProvider component to wrap around our application
 export const AuthProvider = ({ children }: AuthProviderProps) => {
     const [user, setUser] = useState<User | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Start with true to prevent flashing
     const [error, setError] = useState<string | null>(null);
     const queryClient = useQueryClient();
+
+    // Function to fetch the current authenticated user
+    const fetchUser = async (): Promise<User | null> => {
+        try {
+            // First try using the validate-session endpoint which also refreshes the session
+            const validateResponse = await fetch('/api/validate-session', {
+                credentials: 'include', // Important! This sends cookies with the request
+            });
+            
+            if (validateResponse.ok) {
+                const data = await validateResponse.json();
+                if (data.isAuthenticated && data.user) {
+                    return data.user as User;
+                }
+                return null;
+            }
+            
+            // Fallback to the /api/me endpoint if validate-session fails
+            const response = await fetch('/api/me', {
+                credentials: 'include',
+            });
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    return null;
+                }
+                const data = await response.json();
+                throw new Error(data.error || 'Failed to fetch user');
+            }
+            const data = await response.json();
+            return data.user as User;
+        } catch (error) {
+            console.error('Error fetching user:', error);
+            return null;
+        }
+    };
+
+    // Initialize with session check
+    useEffect(() => {
+        const checkSession = async () => {
+            try {
+                const userData = await fetchUser();
+                setUser(userData);
+            } catch (error) {
+                console.error('Session check error:', error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        checkSession();
+    }, []);
 
     // Function to login the user
     const loginUser = async (credentials: {
@@ -61,6 +113,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(credentials),
+            credentials: 'include', // Important! This sends cookies with the request
         });
 
         if (!response.ok) {
@@ -115,6 +168,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(credentials),
+            credentials: 'include', // Important! This sends cookies with the request
         });
 
         if (!response.ok) {
@@ -131,19 +185,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         refetch,
     } = useQuery({
         queryKey: ['user'],
-        queryFn: async () => {
-            const response = await fetch('/api/me');
-            if (!response.ok) {
-                if (response.status === 401) {
-                    return null;
-                }
-                const data = await response.json();
-                console.error('/api/me error:', data);
-                throw new Error(data.error || 'Failed to fetch user');
-            }
-            const data = await response.json();
-            return data.user as User;
-        },
+        queryFn: fetchUser,
         onSuccess: (userData: User | null) => {
             setUser(userData);
             setIsLoading(false);
@@ -219,6 +261,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include', // Important! This sends cookies with the request
             });
 
             if (!response.ok) {

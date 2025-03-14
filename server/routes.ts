@@ -129,24 +129,78 @@ router.post('/logout', (async (req: Request, res: Response) => {
 }) as RequestHandler);
 
 /**
- * Get current user endpoint
- * Returns the currently authenticated user
+ * Session validation endpoint
+ * Validates if the user's session is active and refreshes it
+ */
+router.get('/validate-session', (async (req: Request, res: Response) => {
+    try {
+        // Check if userId exists in session
+        if (!req.session.userId) {
+            res.status(401).json({ 
+                error: 'Not authenticated',
+                isAuthenticated: false 
+            });
+            return;
+        }
+
+        // Get the user from the database
+        const user = await getUserById(req.session.userId);
+
+        // If user not found, clear session and return unauthorized
+        if (!user) {
+            req.session.destroy((err) => {
+                if (err) {
+                    console.error('Error destroying invalid session:', err);
+                }
+            });
+            res.status(401).json({ 
+                error: 'User not found',
+                isAuthenticated: false 
+            });
+            return;
+        }
+
+        // Renew the session by touching it (session middleware will update expire time)
+        req.session.touch();
+        
+        // Return success with sanitized user data
+        const { password, salt, twoFactorSecret, ...userWithoutSensitiveData } = user;
+        res.status(200).json({ 
+            isAuthenticated: true,
+            user: userWithoutSensitiveData
+        });
+    } catch (error) {
+        console.error('Session validation error:', error);
+        res.status(500).json({ 
+            error: 'Internal server error',
+            isAuthenticated: false 
+        });
+    }
+}) as RequestHandler);
+
+/**
+ * Endpoint to fetch the current authenticated user
  */
 router.get('/me', isAuthenticated, (async (req: Request, res: Response) => {
     try {
-        const userId = req.session.userId;
-        const user = await getUserById(userId!);
+        // Get the user from the database
+        const user = await getUserById(req.session.userId!);
 
+        // If user not found, clear session and return unauthorized
         if (!user) {
-            return res.status(404).json({ error: 'User not found' });
+            req.session.destroy((err) => {
+                if (err) {
+                    console.error('Error destroying invalid session:', err);
+                }
+            });
+            return res.status(401).json({ error: 'User not found' });
         }
 
-        // Send response with sanitized user data
-        const { password, salt, ...userWithoutSensitiveData } = user;
-
-        res.status(200).json({ user: userWithoutSensitiveData });
+        // Return success with sanitized user data
+        const { password, salt, twoFactorSecret, ...userWithoutSensitiveData } = user;
+        res.json({ user: userWithoutSensitiveData });
     } catch (error) {
-        console.error('Get current user error:', error);
+        console.error('Error fetching user data:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 }) as RequestHandler);

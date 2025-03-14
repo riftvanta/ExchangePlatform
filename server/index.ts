@@ -18,11 +18,13 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(express.json());
 
+// Session configuration with improved security and persistence
 app.use(
     session({
         store: new PostgresStore({
             conString: process.env.DATABASE_URL,
             createTableIfMissing: true,
+            tableName: 'session', // Match the tableName with your SQL schema
         }),
         secret: process.env.SESSION_SECRET!,
         resave: false,
@@ -30,8 +32,11 @@ app.use(
         cookie: {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
-            maxAge: 1000 * 60 * 60 * 24, // 24 hours
+            maxAge: 1000 * 60 * 60 * 24 * 7, // Extended to 7 days for better persistence
+            sameSite: 'lax', // Protection against CSRF while allowing normal navigation
+            path: '/', // Ensure cookie is available throughout the application
         },
+        name: 'usdt_jod_sid', // Custom name to identify our session cookie
     })
 );
 
