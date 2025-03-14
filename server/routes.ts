@@ -19,13 +19,15 @@ import { generateReadUrl } from './s3';
 import { 
     verifyEmail, 
     createPasswordResetToken, 
-    verifyPasswordResetToken 
+    verifyPasswordResetToken,
+    createEmailVerificationToken 
 } from './email';
 import { 
     sendVerificationConfirmationEmail, 
     sendPasswordResetEmail,
     sendPasswordResetConfirmationEmail,
     sendTransactionNotificationEmail,
+    sendVerificationEmail
 } from '../shared/email';
 import { scryptSync, randomBytes } from 'crypto';
 import { users } from '../shared/schema';
@@ -396,15 +398,8 @@ router.post('/withdraw/usdt', isAuthenticated, (async (
             return res.status(400).json({ error: 'Insufficient balance' });
         }
 
-        // Deduct the amount from the wallet balance
-        const newBalance = currentBalance.minus(withdrawalAmount).toString();
-        
-        await db
-            .update(wallets)
-            .set({ balance: newBalance, updatedAt: new Date() })
-            .where(eq(wallets.id, usdtWallet.id));
-
-        // Create a new transaction record
+        // Create a new transaction record with 'pending' status
+        // IMPORTANT: Do NOT deduct from wallet balance until admin approval
         const newTransaction: NewTransaction = {
             userId: userId,
             walletId: usdtWallet.id,
@@ -732,10 +727,6 @@ router.post('/resend-verification', isAuthenticated, (async (req: Request, res: 
             });
         }
         
-        // Import the modules inside the route handler to avoid circular references
-        const { createEmailVerificationToken } = require('./email');
-        const { sendVerificationEmail } = require('../shared/email');
-        
         // Generate and store a new verification token
         const verificationToken = await createEmailVerificationToken(userId);
         
@@ -987,6 +978,13 @@ router.post(
             if (withdrawalAmount.greaterThan(currentBalance)) {
                 return res.status(400).json({ error: 'Insufficient funds in user\'s wallet' });
             }
+
+            // NOW deduct the amount from the wallet (only after admin approval)
+            const newBalance = currentBalance.minus(withdrawalAmount).toString();
+            await db
+                .update(wallets)
+                .set({ balance: newBalance, updatedAt: new Date() })
+                .where(eq(wallets.id, wallet.id));
 
             // Update transaction status
             await db
