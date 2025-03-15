@@ -2,6 +2,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useState, useEffect } from 'react';
 import { useSocketStore, SocketEvents, TransactionUpdateData } from '../lib/socketService';
 import { toast } from 'react-toastify';
+import { ConfirmDialog } from './ui';
 
 interface Transaction {
     id: string;
@@ -23,6 +24,17 @@ function TransactionHistory() {
     const [filter, setFilter] = useState<'all' | 'deposit' | 'withdrawal'>('all');
     const queryClient = useQueryClient();
     const socket = useSocketStore((state) => state.socket);
+    // Track which transaction is being cancelled
+    const [cancellingTransactionId, setCancellingTransactionId] = useState<string | null>(null);
+    
+    // Add state for confirm dialog
+    const [confirmDialog, setConfirmDialog] = useState({
+        isOpen: false,
+        transactionId: '',
+        transactionType: '',
+        amount: '',
+        currency: ''
+    });
 
     const {
         data: transactions,
@@ -43,6 +55,9 @@ function TransactionHistory() {
     // Cancel transaction mutation
     const cancelMutation = useMutation({
         mutationFn: async (transactionId: string) => {
+            // Set the ID of the transaction being cancelled
+            setCancellingTransactionId(transactionId);
+            
             const response = await fetch(`/api/transactions/${transactionId}/cancel`, {
                 method: 'POST',
                 headers: {
@@ -60,17 +75,36 @@ function TransactionHistory() {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['transactions'] });
             toast.success(data.message || 'Transaction cancelled successfully');
+            // Clear the cancelling ID after success
+            setCancellingTransactionId(null);
         },
         onError: (error: Error) => {
             toast.error(error.message || 'Failed to cancel transaction');
+            // Clear the cancelling ID after error
+            setCancellingTransactionId(null);
         },
     });
 
-    // Handle cancel transaction
-    const handleCancel = (transactionId: string, type: string) => {
-        if (window.confirm(`Are you sure you want to cancel this ${type}?`)) {
-            cancelMutation.mutate(transactionId);
-        }
+    // Show cancel confirmation dialog
+    const showCancelConfirmation = (transaction: Transaction) => {
+        setConfirmDialog({
+            isOpen: true,
+            transactionId: transaction.id,
+            transactionType: transaction.type,
+            amount: transaction.amount,
+            currency: transaction.currency
+        });
+    };
+
+    // Handle cancel confirmation
+    const handleConfirmCancel = () => {
+        cancelMutation.mutate(confirmDialog.transactionId);
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+    };
+
+    // Handle cancel dialog close
+    const handleCancelDialog = () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
     };
 
     // Subscribe to real-time transaction updates
@@ -210,6 +244,9 @@ function TransactionHistory() {
         }
     };
 
+    // Check if any cancel operation is in progress
+    const isCancellingInProgress = cancellingTransactionId !== null;
+
     return (
         <div className="transaction-history-container">
             <div className="transaction-header">
@@ -304,11 +341,12 @@ function TransactionHistory() {
                                         {transaction.status === 'pending' && (
                                             <button 
                                                 className="cancel-btn" 
-                                                onClick={() => handleCancel(transaction.id, transaction.type)}
-                                                disabled={cancelMutation.isPending}
+                                                onClick={() => showCancelConfirmation(transaction)}
+                                                disabled={isCancellingInProgress}
                                                 aria-label={`Cancel ${transaction.type}`}
+                                                data-state={cancellingTransactionId === transaction.id ? "cancelling" : "idle"}
                                             >
-                                                {cancelMutation.isPending ? 'Cancelling...' : 'Cancel'}
+                                                {cancellingTransactionId === transaction.id ? 'Cancelling...' : 'Cancel'}
                                             </button>
                                         )}
                                     </td>
@@ -318,6 +356,18 @@ function TransactionHistory() {
                     </table>
                 </div>
             )}
+
+            {/* Confirmation Dialog */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title={`Cancel ${confirmDialog.transactionType}`}
+                message={`Are you sure you want to cancel this ${confirmDialog.transactionType} of ${confirmDialog.amount} ${confirmDialog.currency}? This action cannot be undone.`}
+                confirmText="Yes, Cancel"
+                cancelText="No, Keep It"
+                confirmButtonClass="danger"
+                onConfirm={handleConfirmCancel}
+                onCancel={handleCancelDialog}
+            />
         </div>
     );
 }

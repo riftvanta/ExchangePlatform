@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useRef, useEffect } from 'react';
+import React, { lazy, Suspense, useRef, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { announceToScreenReader } from '../utils/accessibility';
@@ -6,8 +6,6 @@ import { announceToScreenReader } from '../utils/accessibility';
 // Lazy load components
 const WalletBalances = lazy(() => import('./WalletBalances'));
 const CreateWalletForm = lazy(() => import('./CreateWalletForm'));
-const DepositUsdtForm = lazy(() => import('./DepositUsdtForm'));
-const WithdrawUsdtForm = lazy(() => import('./WithdrawUsdtForm'));
 const TransactionHistory = lazy(() => import('./TransactionHistory'));
 
 // Skeleton loader components
@@ -61,7 +59,6 @@ const TransactionSkeleton = () => (
 
 // Lazy Dashboard component
 const LazyDashboard = () => {
-  const { logout } = useAuth();
   const { user } = useAuth();
   const mainContentRef = useRef<HTMLDivElement>(null);
 
@@ -75,21 +72,27 @@ const LazyDashboard = () => {
     announceToScreenReader('Dashboard loaded');
   }, []);
 
-  // Handle keyboard shortcut for logout
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Alt + Q for logout
-    if (e.altKey && e.key === 'q') {
-      logout();
-      announceToScreenReader('Logging out', 'assertive');
-    }
-  };
+  // Add keyboard shortcut for logout (Alt+Q)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'q') {
+        // Use the logout function directly from AuthContext when needed
+        const { logout } = useAuth();
+        logout();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <div 
       className="dashboard" 
       ref={mainContentRef}
       tabIndex={-1}
-      onKeyDown={handleKeyDown}
       role="region" 
       aria-label="User Dashboard"
     >
@@ -119,6 +122,15 @@ const LazyDashboard = () => {
           <Link to="/profile" className="nav-link">
             View Profile
           </Link>
+          <Link to="/profile/settings" className="nav-link">
+            Settings
+          </Link>
+          <Link to="/deposit" className="nav-link">
+            Deposit USDT
+          </Link>
+          <Link to="/withdraw" className="nav-link">
+            Withdraw USDT
+          </Link>
           {/* Admin links - only visible to admins */}
           {user?.isAdmin && (
             <>
@@ -132,6 +144,17 @@ const LazyDashboard = () => {
           )}
         </div>
       </nav>
+      
+      <section 
+        className="dashboard-section" 
+        aria-labelledby="welcome-heading"
+      >
+        <h2 id="welcome-heading">Welcome, {user?.firstName || 'User'}!</h2>
+        <p>
+          This is your USDT-JOD exchange dashboard where you can manage your wallets, 
+          make deposits, and request withdrawals.
+        </p>
+      </section>
       
       <section 
         className="dashboard-section wallet-section" 
@@ -152,27 +175,6 @@ const LazyDashboard = () => {
         </Suspense>
       </section>
       
-      <div className="transaction-section" role="group" aria-label="Transaction Operations">
-        <section 
-          className="dashboard-section" 
-          aria-labelledby="deposit-heading"
-        >
-          <h2 id="deposit-heading">Deposit USDT</h2>
-          <Suspense fallback={<FormSkeleton />}>
-            <DepositUsdtForm />
-          </Suspense>
-        </section>
-        <section 
-          className="dashboard-section" 
-          aria-labelledby="withdraw-heading"
-        >
-          <h2 id="withdraw-heading">Withdraw USDT</h2>
-          <Suspense fallback={<FormSkeleton />}>
-            <WithdrawUsdtForm />
-          </Suspense>
-        </section>
-      </div>
-      
       <section 
         className="dashboard-section" 
         aria-labelledby="transaction-records-heading"
@@ -188,15 +190,6 @@ const LazyDashboard = () => {
       <div className="keyboard-shortcuts sr-only" aria-live="polite">
         <p>Keyboard shortcuts: Alt+Q to logout</p>
       </div>
-      
-      <button 
-        onClick={logout}
-        className="button"
-        style={{ marginTop: 'var(--spacing-lg)' }}
-        aria-label="Logout from account"
-      >
-        Logout
-      </button>
     </div>
   );
 };

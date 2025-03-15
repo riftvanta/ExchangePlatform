@@ -1,4 +1,6 @@
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
+import { SectionContainer } from '../components/ui';
 
 const ProfilePage = () => {
     const { user } = useAuth();
@@ -8,8 +10,13 @@ const ProfilePage = () => {
     }
 
     return (
-        <div className="profile-page">
-            <h2>User Profile</h2>
+        <SectionContainer className="profile-page">
+            <div className="profile-header">
+                <h1>User Profile</h1>
+                <Link to="/profile/settings" className="settings-button">
+                    Settings
+                </Link>
+            </div>
             <div className="profile-info">
                 {(user.firstName || user.lastName) && (
                     <div className="profile-item">
@@ -31,7 +38,7 @@ const ProfilePage = () => {
                     {user.twoFactorEnabled ? 'Enabled' : 'Disabled'}
                 </div>
             </div>
-        </div>
+        </SectionContainer>
     );
 };
 

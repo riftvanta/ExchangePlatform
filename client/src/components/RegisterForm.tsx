@@ -9,6 +9,8 @@ const RegisterForm = () => {
     const [lastName, setLastName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [passwordError, setPasswordError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -23,6 +25,20 @@ const RegisterForm = () => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
+        setPasswordError(null);
+
+        // Password validation
+        if (password !== confirmPassword) {
+            setPasswordError("Passwords don't match");
+            setIsLoading(false);
+            return;
+        }
+
+        if (password.length < 8) {
+            setPasswordError("Password must be at least 8 characters");
+            setIsLoading(false);
+            return;
+        }
 
         try {
             await register(email, password, firstName, lastName);
@@ -40,55 +56,56 @@ const RegisterForm = () => {
     const displayError = error || authError;
 
     return (
-        <div className="registration-form-container">
-            <h2>Create Account</h2>
+        <div className="auth-form-container">
+            <h2 className="auth-title">Create Account</h2>
+            <p className="auth-subtitle">
+                Join our platform to exchange USDT and JOD securely
+            </p>
+            
             <form onSubmit={handleSubmit}>
-                <div className="form-group">
-                    <label htmlFor="firstName">
-                        <i className="fa-solid fa-user"></i> First Name
-                    </label>
-                    <input
-                        type="text"
-                        id="firstName"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder="Enter your first name"
-                        required
-                    />
+                <div className="name-fields-row">
+                    <div className="form-group half-width">
+                        <label htmlFor="firstName">First Name</label>
+                        <input
+                            type="text"
+                            id="firstName"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            placeholder="F"
+                            required
+                            className="auth-input"
+                        />
+                    </div>
+
+                    <div className="form-group half-width">
+                        <label htmlFor="lastName">Last Name</label>
+                        <input
+                            type="text"
+                            id="lastName"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            placeholder="L"
+                            required
+                            className="auth-input"
+                        />
+                    </div>
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="lastName">
-                        <i className="fa-solid fa-user"></i> Last Name
-                    </label>
-                    <input
-                        type="text"
-                        id="lastName"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder="Enter your last name"
-                        required
-                    />
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="register-email">
-                        <i className="fa-solid fa-envelope"></i> Email
-                    </label>
+                    <label htmlFor="register-email">Email</label>
                     <input
                         type="email"
                         id="register-email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
+                        placeholder="Your email address"
                         required
+                        className="auth-input"
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="register-password">
-                        <i className="fa-solid fa-lock"></i> Password
-                    </label>
+                    <label htmlFor="register-password">Password</label>
                     <input
                         type="password"
                         id="register-password"
@@ -96,34 +113,50 @@ const RegisterForm = () => {
                         onChange={(e) => setPassword(e.target.value)}
                         placeholder="Create a password"
                         required
+                        className="auth-input"
                     />
                 </div>
 
+                <div className="form-group">
+                    <label htmlFor="confirm-password">Confirm Password</label>
+                    <input
+                        type="password"
+                        id="confirm-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm your password"
+                        required
+                        className="auth-input"
+                    />
+                    {passwordError && (
+                        <p className="input-error-message">{passwordError}</p>
+                    )}
+                </div>
+
                 {displayError && (
-                    <div className="alert error">
+                    <div className="auth-error-message">
                         <i className="fa-solid fa-circle-exclamation"></i> {displayError}
                     </div>
                 )}
 
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? (
-                        <>
-                            <i className="fa-solid fa-spinner fa-spin"></i> Creating Account...
-                        </>
-                    ) : (
-                        <>
-                            <i className="fa-solid fa-user-plus"></i> Create Account
-                        </>
-                    )}
+                <button 
+                    type="submit" 
+                    disabled={isLoading}
+                    className="auth-button"
+                >
+                    {isLoading ? "Creating Account..." : "Create Account"}
                 </button>
             </form>
 
+            <div className="auth-divider">
+                <span>OR</span>
+            </div>
+
             <div className="auth-links">
                 <p>
-                    <i className="fa-solid fa-right-to-bracket"></i>
                     Already have an account?{' '}
-                    <Link to="/login" className="signup-link">
-                        Log in
+                    <Link to="/login" className="auth-link">
+                        Sign In
                     </Link>
                 </p>
             </div>

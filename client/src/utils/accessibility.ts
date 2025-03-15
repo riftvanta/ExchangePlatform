@@ -107,44 +107,22 @@ export function createFocusTrap(containerRef: React.RefObject<HTMLElement>) {
 }
 
 /**
- * Announces a message to screen readers
- * @param message - Message to announce
- * @param priority - Whether the message is assertive (interrupting) or polite
+ * Announce a message to screen readers
+ * @param message - The message to announce
+ * @param priority - The priority of the announcement (assertive for important, polite for less important)
  */
 export function announceToScreenReader(message: string, priority: 'assertive' | 'polite' = 'polite') {
-  // Create an ARIA live region if it doesn't exist
-  let announcer = document.getElementById('screen-reader-announcer');
+  const announcer = document.getElementById('screen-reader-announcer');
+  if (!announcer) return;
   
-  if (!announcer) {
-    announcer = document.createElement('div');
-    announcer.id = 'screen-reader-announcer';
-    announcer.setAttribute('aria-live', priority);
-    announcer.setAttribute('aria-atomic', 'true');
-    announcer.classList.add('sr-only'); // Visually hidden
-    document.body.appendChild(announcer);
-  }
+  // Set the aria-live attribute to the requested priority
+  announcer.setAttribute('aria-live', priority);
   
-  // Update the content to trigger announcement
+  // Clear the announcer first (this is a trick to make sure screen readers announce the new content)
   announcer.textContent = '';
-  // Small delay to ensure the change is registered
+  
+  // Small delay to ensure the content change is registered
   setTimeout(() => {
     announcer.textContent = message;
   }, 50);
-}
-
-/**
- * Skip to content link handler
- * @param contentId - ID of the main content section
- */
-export function skipToContent(contentId: string) {
-  const contentElement = document.getElementById(contentId);
-  if (contentElement) {
-    contentElement.setAttribute('tabindex', '-1');
-    contentElement.focus();
-    // Remove the outline after focus if needed
-    contentElement.classList.add('focus-visible');
-    contentElement.addEventListener('blur', () => {
-      contentElement.classList.remove('focus-visible');
-    }, { once: true });
-  }
 } 

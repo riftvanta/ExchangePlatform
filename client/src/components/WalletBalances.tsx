@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { User } from '../context/AuthContext';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 interface Wallet {
     id: string;
@@ -108,26 +109,15 @@ function WalletBalances() {
     return (
         <div className="wallet-balances-container">
             <div className="wallet-balances-header">
-                <h2>Wallet Balances</h2>
+                <h2 id="wallet-balances-heading">Wallet Balances</h2>
                 <button 
-                    className="refresh-balance-btn" 
+                    className="refresh-balance-btn"
                     onClick={handleRefresh}
                     disabled={isRefreshing}
-                    aria-label="Refresh balances"
+                    aria-label="Refresh wallet balances"
                 >
-                    {isRefreshing ? (
-                        <>
-                            <span className="loading-spinner-small" aria-hidden="true"></span>
-                            <span>Refreshing...</span>
-                        </>
-                    ) : (
-                        <>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-                            </svg>
-                            <span>Refresh</span>
-                        </>
-                    )}
+                    <span className={`${isRefreshing ? 'loading-spinner-small' : ''}`}></span>
+                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
                 </button>
             </div>
             <div className="wallet-balances-grid">
@@ -142,12 +132,12 @@ function WalletBalances() {
                             {wallet.currency === 'USDT' ? 'USD Tether' : 'Jordanian Dinar'}
                         </div>
                         <div className="balance-actions">
-                            <button className="balance-action-btn deposit" onClick={() => window.location.href = '#deposit-heading'}>
+                            <Link to="/deposit" className="balance-action-btn deposit">
                                 Deposit
-                            </button>
-                            <button className="balance-action-btn withdraw" onClick={() => window.location.href = '#withdraw-heading'}>
+                            </Link>
+                            <Link to="/withdraw" className="balance-action-btn withdraw">
                                 Withdraw
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 ))}

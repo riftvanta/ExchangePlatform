@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, Link, useLocation } from 'react
 import { useAuth } from './context/AuthContext';
 // Import only the components needed for initial load
 import { ToastContainer as CustomToastContainer } from './components/ui/Toast';
+import { Layout } from './components/ui';
 import { PageTransition } from './components/ui/animation';
 import 'react-toastify/dist/ReactToastify.css';
 import { AnimatePresence } from 'framer-motion';
@@ -11,10 +12,14 @@ import { AnimatePresence } from 'framer-motion';
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const ProfileSettingsPage = lazy(() => import('./pages/ProfileSettingsPage'));
+const WithdrawalPage = lazy(() => import('./pages/WithdrawalPage'));
+const DepositPage = lazy(() => import('./pages/DepositPage'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const ResendVerification = lazy(() => import('./pages/ResendVerification'));
+const HomePage = lazy(() => import('./pages/HomePage'));
 
 // Lazy load admin pages
 const AdminDepositsPage = lazy(() => import('./pages/admin/AdminDepositsPage'));
@@ -67,108 +72,148 @@ function AdminOnly({ children }: { children: ReactNode }) {
 // Main App Content component - separated to use router hooks
 function AppContent() {
     const location = useLocation();
+    const { user } = useAuth();
     const isAuthPage = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email', '/resend-verification'].includes(location.pathname);
     
     return (
         <div className={isAuthPage ? "App-auth" : "App"} role="application">
-            {/* Skip to content link for keyboard users */}
-            <a href="#main-content" className="skip-link">
-                Skip to content
-            </a>
-            
-            {!isAuthPage && (
-                <header className="App-header" role="banner">
-                    <h1>USDT-JOD Exchange Platform</h1>
-                </header>
-            )}
+            {/* Layout component handles navbar visibility based on the route */}
+            <Layout>
+                <main id="main-content">
+                    <AnimatePresence mode="wait">
+                        <Suspense fallback={<LoadingFallback />}>
+                            <Routes>
+                                {/* Public Home Page */}
+                                <Route path="/" element={
+                                    <PageTransition>
+                                        <HomePage />
+                                    </PageTransition>
+                                } />
+                                
+                                {/* Public routes */}
+                                <Route path="/login" element={
+                                    <PageTransition>
+                                        <LoginPage />
+                                    </PageTransition>
+                                } />
+                                <Route path="/register" element={
+                                    <PageTransition>
+                                        <RegisterPage />
+                                    </PageTransition>
+                                } />
+                                {/* Email verification and password reset routes */}
+                                <Route path="/verify-email" element={
+                                    <PageTransition>
+                                        <VerifyEmail />
+                                    </PageTransition>
+                                } />
+                                <Route path="/forgot-password" element={
+                                    <PageTransition>
+                                        <ForgotPassword />
+                                    </PageTransition>
+                                } />
+                                <Route path="/reset-password" element={
+                                    <PageTransition>
+                                        <ResetPassword />
+                                    </PageTransition>
+                                } />
+                                <Route path="/resend-verification" element={
+                                    <PageTransition>
+                                        <ResendVerification />
+                                    </PageTransition>
+                                } />
 
-            <main id="main-content" tabIndex={-1}>
-                <AnimatePresence mode="wait">
-                    <Suspense fallback={<LoadingFallback />}>
-                        <Routes>
-                            {/* Public routes */}
-                            <Route path="/login" element={
-                                <PageTransition>
-                                    <LoginPage />
-                                </PageTransition>
-                            } />
-                            <Route path="/register" element={
-                                <PageTransition>
-                                    <RegisterPage />
-                                </PageTransition>
-                            } />
-                            {/* Email verification and password reset routes */}
-                            <Route path="/verify-email" element={
-                                <PageTransition>
-                                    <VerifyEmail />
-                                </PageTransition>
-                            } />
-                            <Route path="/forgot-password" element={
-                                <PageTransition>
-                                    <ForgotPassword />
-                                </PageTransition>
-                            } />
-                            <Route path="/reset-password" element={
-                                <PageTransition>
-                                    <ResetPassword />
-                                </PageTransition>
-                            } />
-                            <Route path="/resend-verification" element={
-                                <PageTransition>
-                                    <ResendVerification />
-                                </PageTransition>
-                            } />
-
-                            {/* Protected routes */}
-                            <Route
-                                path="/"
-                                element={
-                                    <ProtectedRoute>
-                                        <PageTransition>
-                                            <LazyDashboard />
-                                        </PageTransition>
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/profile"
-                                element={
-                                    <ProtectedRoute>
-                                        <PageTransition>
-                                            <ProfilePage />
-                                        </PageTransition>
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/admin/deposits"
-                                element={
-                                    <ProtectedRoute>
-                                        <AdminOnly>
+                                {/* Protected routes */}
+                                <Route
+                                    path="/dashboard"
+                                    element={
+                                        <ProtectedRoute>
                                             <PageTransition>
-                                                <AdminDepositsPage />
+                                                <LazyDashboard />
                                             </PageTransition>
-                                        </AdminOnly>
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route
-                                path="/admin/withdrawals"
-                                element={
-                                    <ProtectedRoute>
-                                        <AdminOnly>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/profile"
+                                    element={
+                                        <ProtectedRoute>
                                             <PageTransition>
-                                                <AdminWithdrawalsPage />
+                                                <ProfilePage />
                                             </PageTransition>
-                                        </AdminOnly>
-                                    </ProtectedRoute>
-                                }
-                            />
-                            <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                    </Suspense>
-                </AnimatePresence>
-            </main>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/profile/settings"
+                                    element={
+                                        <ProtectedRoute>
+                                            <PageTransition>
+                                                <ProfileSettingsPage />
+                                            </PageTransition>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/profile/saved-addresses"
+                                    element={
+                                        <ProtectedRoute>
+                                            <PageTransition>
+                                                <ProfileSettingsPage />
+                                            </PageTransition>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/deposit"
+                                    element={
+                                        <ProtectedRoute>
+                                            <PageTransition>
+                                                <DepositPage />
+                                            </PageTransition>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/withdraw"
+                                    element={
+                                        <ProtectedRoute>
+                                            <PageTransition>
+                                                <WithdrawalPage />
+                                            </PageTransition>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/admin/deposits"
+                                    element={
+                                        <ProtectedRoute>
+                                            <AdminOnly>
+                                                <PageTransition>
+                                                    <AdminDepositsPage />
+                                                </PageTransition>
+                                            </AdminOnly>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route
+                                    path="/admin/withdrawals"
+                                    element={
+                                        <ProtectedRoute>
+                                            <AdminOnly>
+                                                <PageTransition>
+                                                    <AdminWithdrawalsPage />
+                                                </PageTransition>
+                                            </AdminOnly>
+                                        </ProtectedRoute>
+                                    }
+                                />
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </Suspense>
+                    </AnimatePresence>
+                </main>
+            </Layout>
             
             {/* Screen reader announcer for dynamic content */}
             <div id="screen-reader-announcer" className="sr-only" aria-live="polite" aria-atomic="true"></div>

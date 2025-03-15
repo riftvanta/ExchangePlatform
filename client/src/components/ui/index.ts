@@ -8,6 +8,11 @@ export { Badge, badgeVariants } from './Badge';
 export { Alert, alertVariants } from './Alert';
 export { IconButton } from './IconButton';
 export { ImageOptimizer } from './ImageOptimizer';
+export { default as ConfirmDialog } from './ConfirmDialog';
+export { default as Navbar } from './Navbar';
+export { default as SectionContainer } from './SectionContainer';
+export { default as Layout } from './Layout';
+export { default as Footer } from './Footer';
 
 // Animation components
 export * from './animation';

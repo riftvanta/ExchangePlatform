@@ -3,9 +3,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
 function LoginForm() {
-    const { login, error, user, isLoading } = useAuth();
+    const { login, error: authError, user, isLoading: authLoading } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const navigate = useNavigate();
 
     // Add effect to redirect when user becomes available
@@ -17,6 +18,7 @@ function LoginForm() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsLoading(true);
         try {
             await login(email, password);
             // Don't navigate here - we'll navigate in the useEffect
@@ -24,81 +26,83 @@ function LoginForm() {
         } catch (error: any) {
             // Error handling is already in place in AuthContext
             console.error('Login error:', error);
+        } finally {
+            setIsLoading(false);
         }
     };
 
+    const loading = isLoading || authLoading;
+    const error = authError;
+
     return (
-        <div className="login-form-container">
-            <h2>Login</h2>
+        <div className="auth-form-container">
+            <h2 className="auth-title">Login</h2>
+            <p className="auth-subtitle">
+                Welcome back! Please login to your account
+            </p>
+            
             <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                    <label htmlFor="email">
-                        <i className="fa-solid fa-envelope"></i> Email
-                    </label>
+                    <label htmlFor="email">Email</label>
                     <input
                         type="email"
                         id="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="Enter your email"
+                        placeholder="Your email address"
                         required
+                        className="auth-input"
                     />
                 </div>
 
                 <div className="form-group">
-                    <label htmlFor="password">
-                        <i className="fa-solid fa-lock"></i> Password
-                    </label>
+                    <label htmlFor="password">Password</label>
                     <input
                         type="password"
                         id="password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Enter your password"
+                        placeholder="Your password"
                         required
+                        className="auth-input"
                     />
+                    <div className="forgot-password-link">
+                        <Link to="/forgot-password">
+                            Forgot password?
+                        </Link>
+                    </div>
                 </div>
 
                 {error && (
-                    <div className="alert error">
+                    <div className="auth-error-message">
                         <i className="fa-solid fa-circle-exclamation"></i> {error}
                     </div>
                 )}
 
-                <button type="submit" disabled={isLoading}>
-                    {isLoading ? (
-                        <>
-                            <i className="fa-solid fa-spinner fa-spin"></i> Logging in...
-                        </>
-                    ) : (
-                        <>
-                            <i className="fa-solid fa-right-to-bracket"></i> Login
-                        </>
-                    )}
+                <button 
+                    type="submit" 
+                    disabled={loading}
+                    className="auth-button"
+                >
+                    {loading ? "Logging in..." : "Login"}
                 </button>
             </form>
 
+            <div className="auth-divider">
+                <span>OR</span>
+            </div>
+
             <div className="auth-links">
                 <p>
-                    <i className="fa-solid fa-user-plus"></i>
                     Don't have an account?{' '}
-                    <Link to="/register" className="signup-link">
-                        Sign up
+                    <Link to="/register" className="auth-link">
+                        Create Account
                     </Link>
                 </p>
                 
-                <p>
-                    <i className="fa-solid fa-key"></i>
-                    <Link to="/forgot-password">
-                        Forgot your password?
-                    </Link>
-                </p>
-                
-                <p>
-                    <i className="fa-solid fa-envelope-circle-check"></i>
-                    Need to verify your email?{' '}
+                <p className="auth-secondary-link">
                     <Link to="/resend-verification">
-                        Resend verification email
+                        Need to verify your email?
                     </Link>
                 </p>
             </div>

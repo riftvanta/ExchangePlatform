@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
+import QRCode from 'react-qr-code';
 
 interface DepositData {
     amount: string;
@@ -229,23 +230,46 @@ function DepositUsdtForm() {
                         </button>
                     </div>
                 ) : (
-                    <div className="address-container" style={{ marginBottom: '20px' }}>
-                        <div className="wallet-address">
-                            {userAddress.address}
-                            <button 
-                                onClick={() => copyAddressToClipboard(userAddress.address)}
-                                className="copy-btn"
-                                title="Copy to clipboard"
-                                aria-label="Copy address to clipboard"
-                            >
-                                {isCopied ? '✓ Copied' : 'Copy'}
-                            </button>
-                        </div>
-                        <div style={{ marginTop: '10px' }}>
-                            <p><strong>Network:</strong> TRC20 (TRON)</p>
-                            <p className="verification-banner" style={{ padding: '8px', marginTop: '10px' }}>
-                                <span role="img" aria-label="Important">⚠️</span> <strong>Important:</strong> Send only USDT to this address. Sending any other currency may result in permanent loss.
-                            </p>
+                    <div className="address-container">
+                        <div className="deposit-address-card">
+                            <div className="deposit-address-wrapper">
+                                <div className="qr-code-container">
+                                    <QRCode
+                                        value={userAddress.address}
+                                        size={150}
+                                        level="H"
+                                        bgColor="#FFFFFF"
+                                        fgColor="#000000"
+                                        style={{ height: 'auto', maxWidth: '100%', width: '100%' }}
+                                    />
+                                </div>
+                                <div className="deposit-scan-text">
+                                    Scan with your wallet app to deposit USDT
+                                    <span role="img" aria-label="Mobile phone">📱</span>
+                                </div>
+                                <div className="deposit-network-info">
+                                    <span className="network-label">Network:</span>
+                                    <span className="network-value">TRC20 (TRON)</span>
+                                </div>
+                                <div className="wallet-address">
+                                    {userAddress.address}
+                                    <button 
+                                        onClick={() => copyAddressToClipboard(userAddress.address)}
+                                        className="copy-btn"
+                                        title="Copy to clipboard"
+                                        aria-label="Copy address to clipboard"
+                                    >
+                                        {isCopied ? '✓ Copied' : 'Copy'}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="deposit-warning">
+                                <div className="verification-banner">
+                                    <div className="message">
+                                        <span role="img" aria-label="Important">⚠️</span> <strong>Important:</strong> Send only USDT to this address. Sending any other currency may result in permanent loss.
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
